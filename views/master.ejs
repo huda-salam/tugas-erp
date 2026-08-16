@@ -5,6 +5,7 @@
   <a href="/master?tab=bahan"  class="<%= tab==='bahan' ?'on':'' %>">🌾 Bahan</a>
   <a href="/master?tab=resep"  class="<%= tab==='resep' ?'on':'' %>">📖 Resep (BOM)</a>
   <a href="/master?tab=mitra"  class="<%= tab==='mitra' ?'on':'' %>">🤝 Supplier & Pelanggan</a>
+  <a href="/master?tab=pengguna" class="<%= tab==='pengguna'?'on':'' %>">👤 Pengguna</a>
 </div>
 
 <% if (tab === 'produk') { %>
@@ -178,6 +179,88 @@
     </table></div>
     <% } %>
   </div>
+
+<% } else if (tab === 'pengguna') { %>
+  <div class="card">
+    <div class="card-head"><h2>Tambah Akun</h2><p>Kasir hanya bisa membuka Kasir, Pesanan, dan Stok</p></div>
+    <form method="post" action="/master/pengguna" id="form-pengguna">
+      <div class="baris">
+        <div class="grup"><label for="u-nama">Nama</label>
+          <input type="text" id="u-nama" name="nama" class="kontrol" required></div>
+        <div class="grup"><label for="u-user">Username</label>
+          <input type="text" id="u-user" name="username" class="kontrol" required
+                 placeholder="huruf kecil, min 3 karakter"></div>
+        <div class="grup" style="max-width:150px"><label for="u-peran">Peran</label>
+          <select id="u-peran" name="peran" class="kontrol">
+            <option value="kasir">Kasir</option>
+            <option value="pemilik">Pemilik</option>
+          </select></div>
+      </div>
+      <div class="baris">
+        <div class="grup"><label for="u-sandi">Kata Sandi</label>
+          <input type="password" id="u-sandi" name="sandi" class="kontrol" required minlength="6"
+                 autocomplete="new-password"></div>
+        <div class="grup"><label for="u-sandi2">Ulangi Sandi</label>
+          <input type="password" id="u-sandi2" name="sandi2" class="kontrol" required minlength="6"
+                 autocomplete="new-password"></div>
+      </div>
+      <button type="submit" class="btn btn-sukses btn-blok">BUAT AKUN</button>
+      <p class="petunjuk">Peran <strong>pemilik</strong> melihat seluruh laporan keuangan, kas, dan
+         prive. Beri peran ini hanya kepada pemilik usaha.</p>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Daftar Akun</h2></div>
+    <div class="tabel-scroll"><table>
+      <thead><tr><th>Nama</th><th>Username</th><th class="tg">Peran</th>
+        <th class="tg">Status</th><th>Dibuat</th><th></th></tr></thead>
+      <tbody><% daftarPengguna.forEach(u => { %>
+        <tr>
+          <td><strong><%= u.nama %></strong>
+            <% if (u.id === pengguna.id) { %><span class="badge b-abu">Anda</span><% } %></td>
+          <td class="mono"><%= u.username %></td>
+          <td class="tg"><span class="badge <%= u.peran==='pemilik'?'b-ungu':'b-biru' %>"><%= u.peran %></span></td>
+          <td class="tg"><span class="badge <%= u.aktif?'b-hijau':'b-merah' %>">
+            <%= u.aktif ? 'aktif' : 'nonaktif' %></span></td>
+          <td class="t-lembut"><%= u.dibuat_pada.slice(0,10) %></td>
+          <td class="tg no-print" style="white-space:nowrap">
+            <button type="button" class="btn btn-kecil btn-abu"
+                    onclick="setelSandi(<%= u.id %>, '<%= u.nama %>')">Reset sandi</button>
+            <% if (u.id !== pengguna.id) { %>
+              <form method="post" action="/master/pengguna/<%= u.id %>/aktif" style="display:inline"
+                    onsubmit="return confirm('<%= u.aktif ? "Nonaktifkan" : "Aktifkan" %> <%= u.nama %>?')">
+                <button class="btn btn-kecil <%= u.aktif ? 'btn-bahaya' : 'btn-sukses' %>">
+                  <%= u.aktif ? 'Nonaktifkan' : 'Aktifkan' %></button>
+              </form>
+            <% } %>
+          </td>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+    <p class="petunjuk">Menonaktifkan akun langsung memutus sesi yang sedang berjalan,
+       tidak menunggu kedaluwarsa.</p>
+  </div>
+
+  <form method="post" id="form-reset" style="display:none">
+    <input type="password" name="sandi" id="reset-sandi">
+  </form>
+  <script>
+  document.getElementById('form-pengguna').addEventListener('submit', (e) => {
+    if (document.getElementById('u-sandi').value !== document.getElementById('u-sandi2').value) {
+      e.preventDefault(); alert('Konfirmasi kata sandi tidak cocok.');
+    }
+  });
+  function setelSandi(id, nama) {
+    const s = prompt('Kata sandi baru untuk ' + nama + ' (minimal 6 karakter):');
+    if (s === null) return;
+    if (s.length < 6) { alert('Minimal 6 karakter.'); return; }
+    const f = document.getElementById('form-reset');
+    f.action = '/master/pengguna/' + id + '/sandi';
+    document.getElementById('reset-sandi').value = s;
+    f.submit();
+  }
+  </script>
 
 <% } else { %>
   <div class="card">

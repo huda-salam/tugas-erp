@@ -1,0 +1,31 @@
+<%- include('partials/atas') %>
+
+<div class="card" style="max-width:520px">
+  <div class="card-head">
+    <div><h2>Akun Saya</h2><p><%= pengguna.nama %> · <%= pengguna.username %></p></div>
+    <span class="badge <%= pengguna.peran === 'pemilik' ? 'b-ungu' : 'b-biru' %>"><%= pengguna.peran %></span>
+  </div>
+
+  <form method="post" action="/akun">
+    <div class="judul-seksi">Ganti Kata Sandi</div>
+    <div class="grup">
+      <label for="sandi_lama">Kata Sandi Sekarang</label>
+      <input type="password" id="sandi_lama" name="sandi_lama" class="kontrol" required
+             autocomplete="current-password">
+    </div>
+    <div class="grup">
+      <label for="sandi">Kata Sandi Baru</label>
+      <input type="password" id="sandi" name="sandi" class="kontrol" required minlength="6"
+             autocomplete="new-password">
+      <div class="petunjuk">Minimal 6 karakter</div>
+    </div>
+    <div class="grup">
+      <label for="sandi2">Ulangi Kata Sandi Baru</label>
+      <input type="password" id="sandi2" name="sandi2" class="kontrol" required minlength="6"
+             autocomplete="new-password">
+    </div>
+    <button type="submit" class="btn btn-primer btn-blok">SIMPAN KATA SANDI BARU</button>
+  </form>
+</div>
+
+<%- include('partials/bawah') %>

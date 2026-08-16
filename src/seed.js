@@ -1,180 +1,51 @@
-// Isi master data awal. Jalankan: npm run seed
-// Tambah flag --demo untuk sekalian membuat satu hari transaksi contoh
-// (dibuat lewat service yang sama dengan aplikasi, jadi angkanya pasti konsisten).
-const db = require('./db');
+// Pembungkus CLI untuk data contoh. Logikanya ada di src/contoh.js supaya bisa
+// dipakai juga oleh wizard penyiapan di layar.
+//
+//   npm run seed        master data saja
+//   npm run seed:demo   master data + satu hari transaksi contoh
+//   npm run reset       hapus semua lalu isi ulang dari nol
 const S = require('./services');
+const C = require('./contoh');
 
 const demo = process.argv.includes('--demo');
 const reset = process.argv.includes('--reset');
 
 if (reset) {
-  db.exec(`DELETE FROM mutasi_stok; DELETE FROM mutasi_kas; DELETE FROM biaya;
-           DELETE FROM pencairan_grab;
-           DELETE FROM pesan_masuk; DELETE FROM wa_sesi; DELETE FROM produk_kanal_ref;
-           DELETE FROM penjualan_detail; DELETE FROM penjualan;
-           DELETE FROM pesanan_detail;   DELETE FROM pesanan;
-           DELETE FROM produksi_hasil;   DELETE FROM produksi_bahan; DELETE FROM produksi;
-           DELETE FROM pembelian_detail; DELETE FROM pembelian;
-           DELETE FROM resep; DELETE FROM produk_harga; DELETE FROM produk;
-           DELETE FROM bahan; DELETE FROM supplier; DELETE FROM pelanggan; DELETE FROM pengaturan;
-           DELETE FROM sqlite_sequence;`);
+  C.kosongkan();
   console.log('· data lama dihapus');
 }
 
-if (db.prepare('SELECT COUNT(*) c FROM produk').get().c > 0) {
+if (C.adaMaster()) {
   console.log('Master data sudah ada. Pakai --reset untuk mengulang dari nol.');
   process.exit(0);
 }
 
-S.setPengaturan('nama_usaha', 'Bubur Bayi Procil');
-S.setPengaturan('komisi_grab_persen', '20');
-S.setPengaturan('modal_disetor', '0');
+const A = require('./auth');
 
-const insSup = db.prepare('INSERT INTO supplier (nama,telp) VALUES (?,?)');
-const supplierId = {};
-['Sinar Tani Grosir', 'Toko Buah Segar', 'CV Kemasan Plastik']
-  .forEach((n) => { supplierId[n] = insSup.run(n, null).lastInsertRowid; });
-
-const insPel = db.prepare('INSERT INTO pelanggan (nama,telp) VALUES (?,?)');
-const pelangganId = {};
-[['Ibu Linda', '0812-1111-2222'], ['Bapak Rahmat (Catering)', '0813-3333-4444'],
- ['Posyandu Melati', '0857-5555-6666']]
-  .forEach(([n, t]) => { pelangganId[n] = insPel.run(n, t).lastInsertRowid; });
-
-// satuan sengaja kecil (gram/ml) supaya pemakaian di resep akurat
-const insBahan = db.prepare('INSERT INTO bahan (nama,satuan,stok_min) VALUES (?,?,?)');
-const bahanId = {};
-[
-  ['Beras Merah Organik', 'gram', 2000],
-  ['Beras Putih', 'gram', 2000],
-  ['Pisang Ambon', 'gram', 1000],
-  ['Wortel Segar', 'gram', 1000],
-  ['Santan / Susu Cair', 'ml', 1000],
-  ['Gula Aren', 'gram', 500],
-  ['Cup Kemasan 150ml', 'pcs', 50],
-].forEach(([n, s, m]) => { bahanId[n] = insBahan.run(n, s, m).lastInsertRowid; });
-
-const insProduk = db.prepare('INSERT INTO produk (nama,satuan) VALUES (?,?)');
-const insHarga = db.prepare('INSERT INTO produk_harga (produk_id,kanal,harga) VALUES (?,?,?)');
-const produkId = {};
-[
-  ['Bubur Bayi Beras Merah', 5000, 4800, 6500],
-  ['Bubur Bayi Pisang Susu', 5000, 4800, 6500],
-  ['Puree Wortel Organik', 6000, 5800, 7500],
-].forEach(([n, r, p, g]) => {
-  const id = insProduk.run(n, 'porsi').lastInsertRowid;
-  produkId[n] = id;
-  insHarga.run(id, 'retail', r); insHarga.run(id, 'pesanan', p); insHarga.run(id, 'grab', g);
-});
-
-// Resep per 1 porsi
-const insResep = db.prepare('INSERT INTO resep (produk_id,bahan_id,qty) VALUES (?,?,?)');
-const resep = {
-  'Bubur Bayi Beras Merah': [['Beras Merah Organik', 40], ['Santan / Susu Cair', 30], ['Gula Aren', 8], ['Cup Kemasan 150ml', 1]],
-  'Bubur Bayi Pisang Susu': [['Beras Putih', 35], ['Pisang Ambon', 45], ['Santan / Susu Cair', 40], ['Cup Kemasan 150ml', 1]],
-  'Puree Wortel Organik':   [['Wortel Segar', 80], ['Santan / Susu Cair', 20], ['Cup Kemasan 150ml', 1]],
-};
-for (const [p, list] of Object.entries(resep)) {
-  for (const [b, q] of list) insResep.run(produkId[p], bahanId[b], q);
-}
-
-// Kode item milik GrabFood. Order dari luar membawa kode miliknya, bukan id kita.
-const insRef = db.prepare('INSERT INTO produk_kanal_ref (produk_id,kanal,kode_luar) VALUES (?,?,?)');
-[['Bubur Bayi Beras Merah', 'BBM'], ['Bubur Bayi Pisang Susu', 'BBPS'], ['Puree Wortel Organik', 'PWO']]
-  .forEach(([nama, kode]) => insRef.run(produkId[nama], 'grab', kode));
-
+const rujukan = C.isiMasterContoh();
 console.log('✓ Master data terisi: 3 produk, 7 bahan, resep, 3 supplier, 3 pelanggan');
 
+// Jalur CLI dipakai untuk demo/pengembangan, jadi sekalian siapkan akun bawaan
+// supaya aplikasi langsung bisa dibuka tanpa mengulang wizard tiap kali reset.
+// Instalasi sungguhan (folder data/ kosong, tanpa seed) tetap lewat wizard.
+if (!A.sudahDisiapkan()) {
+  A.buatPengguna({ nama: 'Pemilik', username: 'pemilik', sandi: 'pemilik123', peran: 'pemilik' });
+  S.setPengaturan('setup_selesai', '1');
+  console.log('✓ Akun bawaan dibuat — username: pemilik  ·  sandi: pemilik123');
+  console.log('  Ganti sandinya lewat menu Akun setelah masuk.');
+}
+
 if (demo) {
+  C.isiTransaksiContoh(rujukan);
+
   const t = S.hariIni();
-  S.simpanModal({ tanggal: t, jumlah: 500000, keterangan: 'Modal awal usaha' });
-
-  S.simpanPembelian({
-    tanggal: t, supplier_id: supplierId['Sinar Tani Grosir'], cara_bayar: 'tunai',
-    items: [
-      { bahan_id: bahanId['Beras Merah Organik'], qty: 3000, harga_satuan: 18 },
-      { bahan_id: bahanId['Beras Putih'], qty: 2000, harga_satuan: 12 },
-      { bahan_id: bahanId['Pisang Ambon'], qty: 2000, harga_satuan: 15 },
-      { bahan_id: bahanId['Santan / Susu Cair'], qty: 3000, harga_satuan: 8 },
-      { bahan_id: bahanId['Gula Aren'], qty: 1000, harga_satuan: 22 },
-      { bahan_id: bahanId['Cup Kemasan 150ml'], qty: 200, harga_satuan: 350 },
-    ],
-  });
-
-  S.simpanProduksi({
-    tanggal: t,
-    bahan: [
-      { bahan_id: bahanId['Beras Merah Organik'], qty: 40 * 45 },
-      { bahan_id: bahanId['Santan / Susu Cair'], qty: 30 * 45 },
-      { bahan_id: bahanId['Gula Aren'], qty: 8 * 45 },
-      { bahan_id: bahanId['Cup Kemasan 150ml'], qty: 45 },
-    ],
-    hasil: [{ produk_id: produkId['Bubur Bayi Beras Merah'], qty: 45 }],
-  });
-
-  S.simpanProduksi({
-    tanggal: t,
-    bahan: [
-      { bahan_id: bahanId['Beras Putih'], qty: 35 * 35 },
-      { bahan_id: bahanId['Pisang Ambon'], qty: 45 * 35 },
-      { bahan_id: bahanId['Santan / Susu Cair'], qty: 40 * 35 },
-      { bahan_id: bahanId['Cup Kemasan 150ml'], qty: 35 },
-    ],
-    hasil: [{ produk_id: produkId['Bubur Bayi Pisang Susu'], qty: 35 }],
-  });
-
-  S.simpanPesanan({
-    tanggal: t, tanggal_kirim: t, pelanggan_id: pelangganId['Ibu Linda'],
-    items: [
-      { produk_id: produkId['Bubur Bayi Beras Merah'], qty: 5, harga: 4800 },
-      { produk_id: produkId['Bubur Bayi Pisang Susu'], qty: 5, harga: 4800 },
-    ],
-  });
-
-  S.simpanPenjualan({
-    tanggal: t, kanal: 'retail', metode_bayar: 'tunai', uang_diterima: 150000,
-    items: [
-      { produk_id: produkId['Bubur Bayi Beras Merah'], qty: 20, harga: 5000 },
-      { produk_id: produkId['Bubur Bayi Pisang Susu'], qty: 8, harga: 5000 },
-    ],
-  });
-
-  // Dua order GrabFood masuk antrean; satu diproses, satu dibiarkan menunggu
-  const grabSelesai = S.simpanPesanan({
-    tanggal: t, kanal: 'grab', ref_luar: 'GRB-9021 · Ahmad Subarjo',
-    items: [{ produk_id: produkId['Bubur Bayi Beras Merah'], qty: 3, harga: 6500 }],
-  });
-  S.simpanPesanan({
-    tanggal: t, kanal: 'grab', ref_luar: 'GRB-9044 · Siti Rahayu',
-    items: [
-      { produk_id: produkId['Bubur Bayi Beras Merah'], qty: 2, harga: 6500 },
-      { produk_id: produkId['Bubur Bayi Pisang Susu'], qty: 1, harga: 6500 },
-    ],
-  });
-
-  S.simpanPenjualan({
-    tanggal: t, kanal: 'grab', pesanan_id: grabSelesai.id, ref_luar: 'GRB-9021 · Ahmad Subarjo',
-    items: [{ produk_id: produkId['Bubur Bayi Beras Merah'], qty: 3, harga: 6500 }],
-  });
-
-  S.simpanBiaya({ tanggal: t, kategori: 'transportasi', keterangan: 'Bensin antar pesanan', jumlah: 25000 });
-  S.simpanBiaya({ tanggal: t, kategori: 'gas & listrik', keterangan: 'Isi ulang gas LPG 3kg', jumlah: 22000 });
-
-  // Sisa jualan sore yang tidak laku, dibuang dan diakui sebagai kerugian
-  S.simpanWaste({
-    tanggal: t, item_tipe: 'produk', item_id: produkId['Bubur Bayi Pisang Susu'],
-    qty: 3, alasan: 'tidak laku / sisa hari ini',
-  });
-
-  // Pemilik mengambil uang untuk keperluan pribadi
-  S.simpanPrive({ tanggal: t, jumlah: 50000, keterangan: 'Ambil untuk belanja rumah' });
-
   const k = S.laporanKeuangan(t, t);
+  const angka = (n) => Math.round(n).toLocaleString('id-ID');
   console.log('✓ Transaksi contoh dibuat untuk', t);
-  console.log('  Laba bersih :', Math.round(k.labaRugi.labaBersih).toLocaleString('id-ID'));
-  console.log('  Total aset  :', Math.round(k.neraca.totalAset).toLocaleString('id-ID'));
-  console.log('  Piutang Grab:', Math.round(k.neraca.piutang).toLocaleString('id-ID'), '(belum dicairkan)');
-  console.log('  Prive       :', Math.round(k.neraca.prive).toLocaleString('id-ID'));
-  console.log('  Waste       :', Math.round(-k.labaRugi.penyesuaian.waste).toLocaleString('id-ID'), '(kerugian)');
+  console.log('  Laba bersih :', angka(k.labaRugi.labaBersih));
+  console.log('  Total aset  :', angka(k.neraca.totalAset));
+  console.log('  Piutang Grab:', angka(k.neraca.piutang), '(belum dicairkan)');
+  console.log('  Prive       :', angka(k.neraca.prive));
+  console.log('  Waste       :', angka(-k.labaRugi.penyesuaian.waste), '(kerugian)');
   console.log('  Neraca      :', k.neraca.seimbang ? 'SEIMBANG ✓' : 'TIDAK SEIMBANG ✗');
 }

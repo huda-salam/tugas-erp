@@ -8,22 +8,29 @@
 </head>
 <body class="<%= typeof adaBar !== 'undefined' && adaBar ? 'ada-bar' : '' %>">
 
+<% const pemilik = pengguna && pengguna.peran === 'pemilik'; %>
+
 <nav class="nav">
-  <a href="/"          class="<%= jalur === '/' ? 'on' : '' %>"><i>🏠</i>Beranda</a>
+  <% if (pemilik) { %>
+    <a href="/"          class="<%= jalur === '/' ? 'on' : '' %>"><i>🏠</i>Beranda</a>
+  <% } %>
   <a href="/kasir"     class="<%= jalur.startsWith('/kasir') ? 'on' : '' %>"><i>🧾</i>Kasir</a>
   <a href="/pesanan"   class="<%= jalur.startsWith('/pesanan') ? 'on' : '' %>"><i>📋</i>Pesanan</a>
-  <a href="/pembelian" class="<%= jalur.startsWith('/pembelian') ? 'on' : '' %>"><i>🛒</i>Pembelian</a>
-  <a href="/produksi"  class="<%= jalur.startsWith('/produksi') ? 'on' : '' %>"><i>🍲</i>Produksi</a>
   <a href="/inventory" class="<%= jalur.startsWith('/inventory') ? 'on' : '' %>"><i>📦</i>Stok</a>
-  <a href="/penyesuaian" class="<%= jalur.startsWith('/penyesuaian') ? 'on' : '' %>"><i>⚖️</i>Penyesuaian</a>
-  <a href="/kas"       class="<%= jalur === '/kas' ? 'on' : '' %>"><i>💵</i>Kas</a>
-  <a href="/laporan/penjualan"           class="<%= jalur === '/laporan/penjualan' ? 'on' : '' %>"><i>📈</i>Lap. Jual</a>
-  <a href="/laporan/pembelian-produksi"  class="<%= jalur === '/laporan/pembelian-produksi' ? 'on' : '' %>"><i>🏭</i>Lap. Produksi</a>
-  <a href="/laporan/keuangan"            class="<%= jalur === '/laporan/keuangan' ? 'on' : '' %>"><i>📊</i>Keuangan</a>
-  <a href="/master"    class="<%= jalur.startsWith('/master') ? 'on' : '' %>"><i>⚙️</i>Master</a>
-<% if (simulasi) { %>
-  <a href="/simulasi" target="_blank" rel="noopener" class="nav-simulasi"><i>📱</i>Simulasi</a>
-<% } %>
+  <% if (pemilik) { %>
+    <a href="/pembelian" class="<%= jalur.startsWith('/pembelian') ? 'on' : '' %>"><i>🛒</i>Pembelian</a>
+    <a href="/produksi"  class="<%= jalur.startsWith('/produksi') ? 'on' : '' %>"><i>🍲</i>Produksi</a>
+    <a href="/penyesuaian" class="<%= jalur.startsWith('/penyesuaian') ? 'on' : '' %>"><i>⚖️</i>Penyesuaian</a>
+    <a href="/kas"       class="<%= jalur === '/kas' ? 'on' : '' %>"><i>💵</i>Kas</a>
+    <a href="/laporan/penjualan"           class="<%= jalur === '/laporan/penjualan' ? 'on' : '' %>"><i>📈</i>Lap. Jual</a>
+    <a href="/laporan/pembelian-produksi"  class="<%= jalur === '/laporan/pembelian-produksi' ? 'on' : '' %>"><i>🏭</i>Lap. Produksi</a>
+    <a href="/laporan/keuangan"            class="<%= jalur === '/laporan/keuangan' ? 'on' : '' %>"><i>📊</i>Keuangan</a>
+    <a href="/master"    class="<%= jalur.startsWith('/master') ? 'on' : '' %>"><i>⚙️</i>Master</a>
+    <% if (simulasi) { %>
+      <a href="/simulasi" target="_blank" rel="noopener" class="nav-simulasi"><i>📱</i>Simulasi</a>
+    <% } %>
+  <% } %>
+  <a href="/akun" class="<%= jalur.startsWith('/akun') ? 'on' : '' %>"><i>👤</i>Akun</a>
 </nav>
 
 <header class="topbar">
@@ -31,7 +38,20 @@
     <h1><%= judul %></h1>
     <div class="sub"><%= namaUsaha %> · <%= tglID(hariIni) %></div>
   </div>
-  <div class="kas">Saldo Kas<b><%= rupiah(saldoKas) %></b></div>
+  <div class="topbar-kanan">
+    <% if (saldoKas !== null && saldoKas !== undefined) { %>
+      <div class="kas">Saldo Kas<b><%= rupiah(saldoKas) %></b></div>
+    <% } %>
+    <% if (pengguna) { %>
+      <div class="pengguna-chip">
+        <span class="nama"><%= pengguna.nama %></span>
+        <span class="peran"><%= pengguna.peran %></span>
+      </div>
+      <form method="post" action="/keluar" style="margin:0">
+        <button type="submit" class="btn-keluar" title="Keluar">⏻</button>
+      </form>
+    <% } %>
+  </div>
 </header>
 
 <main class="wrap">

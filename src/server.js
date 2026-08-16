@@ -4,6 +4,8 @@ const db = require('./db');
 const S = require('./services');
 const IN = require('./intake');
 const sse = require('./sse');
+const A = require('./auth');
+const C = require('./contoh');
 
 // Simulator hanya alat peraga; bisa dimatikan lewat env di pemakaian sungguhan.
 const SIMULASI = process.env.SIMULASI !== '0';
@@ -25,6 +27,13 @@ const tglID = (s) => {
   return `${d} ${['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'][+m]} ${y}`;
 };
 
+// Kenali pengguna dari cookie sesi sebelum apa pun yang lain.
+app.use((req, res, next) => {
+  req.token = A.bacaCookie(req, A.NAMA_COOKIE);
+  req.pengguna = A.bacaSesi(req.token);
+  next();
+});
+
 app.use((req, res, next) => {
   res.locals.rupiah = rupiah;
   res.locals.angka = angka;
@@ -33,9 +42,12 @@ app.use((req, res, next) => {
   res.locals.jalur = req.path;
   res.locals.ok = req.query.ok || null;
   res.locals.err = req.query.err || null;
-  res.locals.namaUsaha = S.pengaturan('nama_usaha', 'Bubur Bayi Procil');
-  res.locals.saldoKas = db.prepare(
-    "SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END),0) s FROM mutasi_kas").get().s;
+  res.locals.namaUsaha = S.pengaturan('nama_usaha', 'Usaha Saya');
+  res.locals.pengguna = req.pengguna || null;
+  // Saldo kas tidak diperlihatkan ke kasir
+  res.locals.saldoKas = req.pengguna && req.pengguna.peran === 'pemilik'
+    ? db.prepare("SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END),0) s FROM mutasi_kas").get().s
+    : null;
   res.locals.adaBar = false;
   res.locals.simulasi = SIMULASI;
   next();
@@ -61,6 +73,119 @@ function ambilBaris(body, nama) {
   if (Array.isArray(src)) return src;
   return Object.keys(src).sort((a, b) => a - b).map((k) => src[k]);
 }
+
+
+// Kasir hanya boleh menyentuh layar operasional. Laporan keuangan, kas, prive,
+// penyesuaian, master data, dan dashboard adalah wilayah pemilik.
+const AKSES_KASIR = ['/kasir', '/pesanan', '/inventory', '/akun', '/keluar', '/events'];
+const bolehAkses = (peran, p) =>
+  peran === 'pemilik' || AKSES_KASIR.some((a) => p === a || p.startsWith(a + '/'));
+
+// Hanya terima tujuan internal, supaya ?dari= tidak bisa dipakai mengarahkan ke luar
+const tujuanAman = (v) => (typeof v === 'string' && /^\/(?!\/)/.test(v) ? v : null);
+
+app.use((req, res, next) => {
+  const p = req.path;
+
+  // Webhook luar memakai X-Intake-Token, bukan sesi — jangan dihadang.
+  if (p.startsWith('/intake/')) return next();
+
+  if (!A.sudahDisiapkan()) return p === '/setup' ? next() : res.redirect('/setup');
+  if (p === '/setup') return res.redirect('/');
+
+  if (!req.pengguna) {
+    if (p === '/masuk') return next();
+    if (req.method !== 'GET') return res.status(401).json({ ok: false, pesan: 'Sesi berakhir.' });
+    return res.redirect('/masuk?dari=' + encodeURIComponent(req.originalUrl));
+  }
+  if (p === '/masuk') return res.redirect('/');
+
+  if (!bolehAkses(req.pengguna.peran, p)) {
+    // Dashboard memuat saldo dan laba; kasir diarahkan ke layar kerjanya.
+    if (p === '/') return res.redirect('/kasir');
+    return res.status(403).render('galat', {
+      judul: 'Akses ditolak',
+      pesan: 'Halaman ini hanya untuk pemilik. Hubungi pemilik bila Anda memerlukannya.',
+    });
+  }
+  next();
+});
+
+// ============ SETUP, MASUK, KELUAR, AKUN ============
+app.get('/setup', (req, res) => {
+  res.render('setup', { judul: 'Penyiapan Awal', adaDataLama: A.adaDataLama(), nilai: {} });
+});
+
+app.post('/setup', (req, res) => {
+  const b = req.body || {};
+  try {
+    if ((b.sandi || '') !== (b.sandi2 || '')) throw new Error('Konfirmasi kata sandi tidak cocok.');
+
+    const pilihan = ['kosong', 'contoh', 'pakai'].includes(b.data_awal) ? b.data_awal : 'kosong';
+    const u = db.transaction(() => {
+      if (pilihan === 'kosong' && C.adaMaster()) C.kosongkan();
+      if (pilihan === 'contoh') { if (C.adaMaster()) C.kosongkan(); C.isiMasterContoh(); }
+      // 'pakai' sengaja tidak menyentuh data yang sudah ada
+
+      S.setPengaturan('nama_usaha', (b.nama_usaha || 'Usaha Saya').trim());
+      S.setPengaturan('jenis_usaha', (b.jenis_usaha || '').trim());
+      S.setPengaturan('telp_usaha', (b.telp_usaha || '').trim());
+      S.setPengaturan('alamat_usaha', (b.alamat_usaha || '').trim());
+      if (!S.pengaturan('komisi_grab_persen', '')) S.setPengaturan('komisi_grab_persen', '20');
+
+      const u = A.buatPengguna({
+        nama: b.nama_pemilik, username: b.username, sandi: b.sandi, peran: 'pemilik',
+      });
+      S.setPengaturan('setup_selesai', '1');
+      return u;
+    })();
+
+    if (S.num(b.modal_awal) > 0) {
+      S.simpanModal({ jumlah: b.modal_awal, keterangan: 'Modal awal usaha' });
+    }
+
+    A.pasangCookie(res, A.buatSesi(u.id));
+    res.redirect('/?ok=' + encodeURIComponent('Penyiapan selesai. Selamat datang, ' + u.username + '!'));
+  } catch (e) {
+    res.status(400).render('setup', {
+      judul: 'Penyiapan Awal', adaDataLama: A.adaDataLama(), nilai: b, err: e.message,
+    });
+  }
+});
+
+app.get('/masuk', (req, res) => {
+  res.render('masuk', { judul: 'Masuk', dari: tujuanAman(req.query.dari) || '' });
+});
+
+app.post('/masuk', (req, res) => {
+  const b = req.body || {};
+  try {
+    const { pengguna, token } = A.masuk(b.username, b.sandi);
+    A.pasangCookie(res, token);
+    res.redirect(tujuanAman(b.dari) || (pengguna.peran === 'pemilik' ? '/' : '/kasir'));
+  } catch (e) {
+    res.status(401).render('masuk', {
+      judul: 'Masuk', dari: tujuanAman(b.dari) || '', err: e.message, username: b.username || '',
+    });
+  }
+});
+
+app.post('/keluar', (req, res) => {
+  A.hapusSesi(req.token);      // dicabut di server, bukan sekadar menghapus cookie
+  A.hapusCookie(res);
+  res.redirect('/masuk');
+});
+
+app.get('/akun', (req, res) => res.render('akun', { judul: 'Akun Saya' }));
+
+app.post('/akun', aman('/akun', (req) => {
+  const b = req.body || {};
+  const p = db.prepare('SELECT kata_sandi FROM pengguna WHERE id = ?').get(req.pengguna.id);
+  if (!A.cocokSandi(b.sandi_lama || '', p.kata_sandi)) throw new Error('Kata sandi lama salah.');
+  if ((b.sandi || '') !== (b.sandi2 || '')) throw new Error('Konfirmasi kata sandi baru tidak cocok.');
+  A.gantiSandi(req.pengguna.id, b.sandi);
+  return 'Kata sandi berhasil diganti.';
+}));
 
 // ============ DASHBOARD ============
 app.get('/', (req, res) => {
@@ -220,7 +345,7 @@ app.get('/inventory', (req, res) => {
 
 // ============ MASTER ============
 app.get('/master', (req, res) => {
-  const tab = ['produk', 'bahan', 'resep', 'mitra'].includes(req.query.tab) ? req.query.tab : 'produk';
+  const tab = ['produk', 'bahan', 'resep', 'mitra', 'pengguna'].includes(req.query.tab) ? req.query.tab : 'produk';
   res.render('master', {
     judul: 'Master Data', tab,
     produk: db.prepare(`
@@ -238,6 +363,7 @@ app.get('/master', (req, res) => {
     supplier: db.prepare('SELECT * FROM supplier WHERE aktif=1 ORDER BY nama').all(),
     pelanggan: db.prepare('SELECT * FROM pelanggan WHERE aktif=1 ORDER BY nama').all(),
     komisiGrab: S.pengaturan('komisi_grab_persen', '20'),
+    daftarPengguna: A.daftarPengguna(),
   });
 });
 
@@ -293,6 +419,34 @@ app.post('/master/pengaturan', aman('/master?tab=produk', (req) => {
   S.setPengaturan('komisi_grab_persen', S.num(req.body.komisi_grab_persen));
   if (req.body.nama_usaha) S.setPengaturan('nama_usaha', req.body.nama_usaha.trim());
   return 'Pengaturan disimpan.';
+}));
+
+app.post('/master/pengguna', aman('/master?tab=pengguna', (req) => {
+  const b = req.body || {};
+  if ((b.sandi || '') !== (b.sandi2 || '')) throw new Error('Konfirmasi kata sandi tidak cocok.');
+  const u = A.buatPengguna({ nama: b.nama, username: b.username, sandi: b.sandi, peran: b.peran });
+  return `Akun ${u.username} dibuat.`;
+}));
+
+app.post('/master/pengguna/:id/aktif', aman('/master?tab=pengguna', (req) => {
+  const id = Number(req.params.id);
+  if (id === req.pengguna.id) throw new Error('Tidak bisa menonaktifkan akun Anda sendiri.');
+  const p = db.prepare('SELECT nama, aktif FROM pengguna WHERE id = ?').get(id);
+  if (!p) throw new Error('Akun tidak ditemukan.');
+  const baru = p.aktif ? 0 : 1;
+  db.prepare('UPDATE pengguna SET aktif = ? WHERE id = ?').run(baru, id);
+  // Menonaktifkan berarti sesi yang sedang jalan ikut dicabut, bukan menunggu kedaluwarsa
+  if (!baru) A.hapusSesiPengguna(id);
+  return `${p.nama} ${baru ? 'diaktifkan' : 'dinonaktifkan'}.`;
+}));
+
+app.post('/master/pengguna/:id/sandi', aman('/master?tab=pengguna', (req) => {
+  const id = Number(req.params.id);
+  const p = db.prepare('SELECT nama FROM pengguna WHERE id = ?').get(id);
+  if (!p) throw new Error('Akun tidak ditemukan.');
+  A.gantiSandi(id, req.body.sandi);
+  A.hapusSesiPengguna(id);   // paksa login ulang dengan sandi baru
+  return `Kata sandi ${p.nama} disetel ulang.`;
 }));
 
 // ============ KAS ============

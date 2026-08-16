@@ -208,6 +208,26 @@ CREATE TABLE IF NOT EXISTS biaya (
   dibuat_pada TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
+-- ============ AKUN & SESI ============
+CREATE TABLE IF NOT EXISTS pengguna (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  nama        TEXT NOT NULL,
+  username    TEXT NOT NULL UNIQUE,
+  -- format "salt:hash" hasil scrypt; tidak pernah menyimpan sandi apa adanya
+  kata_sandi  TEXT NOT NULL,
+  peran       TEXT NOT NULL DEFAULT 'kasir' CHECK (peran IN ('pemilik','kasir')),
+  aktif       INTEGER NOT NULL DEFAULT 1,
+  dibuat_pada TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+CREATE TABLE IF NOT EXISTS sesi (
+  id          TEXT PRIMARY KEY,          -- token acak, dikirim sebagai cookie
+  pengguna_id INTEGER NOT NULL REFERENCES pengguna(id) ON DELETE CASCADE,
+  kedaluwarsa TEXT NOT NULL,
+  dibuat_pada TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_sesi_kedaluwarsa ON sesi(kedaluwarsa);
+
 -- ============ INTAKE PESANAN DARI KANAL LUAR ============
 -- Log mentah tiap kiriman yang masuk (WhatsApp / GrabFood), dicatat SEBELUM diolah
 -- supaya bisa ditelusuri dan diputar ulang kalau parser salah baca.

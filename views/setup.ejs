@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Penyiapan Awal · ERP Mini</title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="auth-body">
+
+<div class="auth-panggung">
+
+  <aside class="auth-kiri">
+    <div class="auth-merek">🍲 ERP Mini</div>
+    <h1>Siapkan usaha Anda<br>dalam satu langkah</h1>
+    <p class="auth-sub">Isi formulir di samping, lalu aplikasi langsung siap dipakai.
+       Tidak ada perintah terminal yang perlu dijalankan.</p>
+    <ul class="auth-daftar">
+      <li><span>🧾</span> Kasir tiga kanal — retail, pesanan, GrabFood</li>
+      <li><span>📦</span> Stok bahan &amp; produk dengan kartu stok</li>
+      <li><span>🍲</span> Produksi berbasis resep, HPP dihitung otomatis</li>
+      <li><span>💵</span> Buku kas, laba rugi, dan neraca yang selalu seimbang</li>
+      <li><span>📱</span> Simulasi pesanan masuk dari WhatsApp &amp; GrabFood</li>
+    </ul>
+    <p class="auth-catatan">Data disimpan sebagai satu berkas SQLite di komputer ini.
+       Tidak dikirim ke mana pun.</p>
+  </aside>
+
+  <main class="auth-kanan">
+    <form method="post" action="/setup" class="auth-kartu" id="form-setup">
+      <h2>Penyiapan Awal</h2>
+      <p class="petunjuk" style="margin-bottom:16px">Hanya muncul sekali, saat aplikasi pertama dibuka.</p>
+
+      <% if (typeof err !== 'undefined' && err) { %>
+        <div class="pesan pesan-galat">⚠️ <%= err %></div>
+      <% } %>
+
+      <div class="judul-seksi">1. Data Usaha</div>
+      <div class="grup">
+        <label for="nama_usaha">Nama Usaha *</label>
+        <input type="text" id="nama_usaha" name="nama_usaha" class="kontrol" required
+               placeholder="Contoh: Bubur Bayi Procil" value="<%= nilai.nama_usaha || '' %>">
+      </div>
+      <div class="baris">
+        <div class="grup">
+          <label for="jenis_usaha">Jenis Usaha</label>
+          <input type="text" id="jenis_usaha" name="jenis_usaha" class="kontrol"
+                 placeholder="Makanan &amp; minuman" value="<%= nilai.jenis_usaha || '' %>">
+        </div>
+        <div class="grup">
+          <label for="telp_usaha">Telepon</label>
+          <input type="text" id="telp_usaha" name="telp_usaha" class="kontrol"
+                 placeholder="0812-…" value="<%= nilai.telp_usaha || '' %>">
+        </div>
+      </div>
+      <div class="grup">
+        <label for="alamat_usaha">Alamat</label>
+        <input type="text" id="alamat_usaha" name="alamat_usaha" class="kontrol"
+               placeholder="Opsional" value="<%= nilai.alamat_usaha || '' %>">
+      </div>
+
+      <div class="judul-seksi">2. Akun Pemilik</div>
+      <div class="grup">
+        <label for="nama_pemilik">Nama Anda *</label>
+        <input type="text" id="nama_pemilik" name="nama_pemilik" class="kontrol" required
+               value="<%= nilai.nama_pemilik || '' %>">
+      </div>
+      <div class="baris">
+        <div class="grup">
+          <label for="username">Username *</label>
+          <input type="text" id="username" name="username" class="kontrol" required
+                 autocomplete="username" placeholder="pemilik" value="<%= nilai.username || '' %>">
+          <div class="petunjuk">Huruf kecil, minimal 3 karakter</div>
+        </div>
+        <div class="grup">
+          <label for="sandi">Kata Sandi *</label>
+          <input type="password" id="sandi" name="sandi" class="kontrol" required
+                 minlength="6" autocomplete="new-password">
+          <div class="petunjuk">Minimal 6 karakter</div>
+        </div>
+        <div class="grup">
+          <label for="sandi2">Ulangi Sandi *</label>
+          <input type="password" id="sandi2" name="sandi2" class="kontrol" required
+                 minlength="6" autocomplete="new-password">
+        </div>
+      </div>
+
+      <div class="judul-seksi">3. Data Awal</div>
+      <div class="pilihan-data">
+        <% if (adaDataLama) { %>
+          <label class="pilih-kartu">
+            <input type="radio" name="data_awal" value="pakai" checked>
+            <div>
+              <strong>Pakai data yang sudah ada</strong>
+              <span>Database ini sudah berisi produk dan transaksi. Semuanya dipertahankan.</span>
+            </div>
+          </label>
+        <% } %>
+        <label class="pilih-kartu">
+          <input type="radio" name="data_awal" value="contoh" <%= adaDataLama ? '' : 'checked' %>>
+          <div>
+            <strong>Isi dengan data contoh</strong>
+            <span>Produk bubur bayi, bahan, resep, supplier, dan pelanggan. Cocok untuk mencoba dulu.</span>
+          </div>
+        </label>
+        <label class="pilih-kartu">
+          <input type="radio" name="data_awal" value="kosong">
+          <div>
+            <strong>Mulai kosong</strong>
+            <span>Anda mengisi sendiri produk dan bahan dari menu Master Data.</span>
+          </div>
+        </label>
+      </div>
+      <% if (adaDataLama) { %>
+        <div class="pesan pesan-galat" style="margin-top:10px">
+          ⚠️ Memilih <strong>data contoh</strong> atau <strong>mulai kosong</strong> akan
+          <strong>menghapus seluruh data yang sudah ada</strong> di database ini.
+        </div>
+      <% } %>
+
+      <div class="grup" style="margin-top:14px">
+        <label for="modal_awal">Modal Awal (Rp)</label>
+        <input type="number" id="modal_awal" name="modal_awal" class="kontrol" min="0" step="1000"
+               placeholder="Opsional — uang yang Anda setor untuk memulai usaha">
+        <div class="petunjuk">Langsung tercatat sebagai kas masuk dan ekuitas di neraca.</div>
+      </div>
+
+      <button type="submit" class="btn btn-sukses btn-blok" style="margin-top:18px; padding:14px">
+        MULAI PAKAI APLIKASI
+      </button>
+    </form>
+  </main>
+</div>
+
+<script>
+document.getElementById('form-setup').addEventListener('submit', (e) => {
+  const a = document.getElementById('sandi').value;
+  const b = document.getElementById('sandi2').value;
+  if (a !== b) { e.preventDefault(); alert('Konfirmasi kata sandi tidak cocok.'); return; }
+  const pilih = document.querySelector('input[name=data_awal]:checked').value;
+  const adaLama = <%= adaDataLama ? 'true' : 'false' %>;
+  if (adaLama && pilih !== 'pakai') {
+    if (!confirm('Seluruh data yang sudah ada akan DIHAPUS dan tidak bisa dikembalikan.\n\nLanjutkan?')) {
+      e.preventDefault();
+    }
+  }
+});
+</script>
+</body>
+</html>

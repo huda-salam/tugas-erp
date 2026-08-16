@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Masuk · <%= namaUsaha %></title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="auth-body auth-tengah">
+
+<form method="post" action="/masuk" class="auth-kartu auth-sempit">
+  <div class="auth-merek" style="color:var(--biru)">🍲 <%= namaUsaha %></div>
+  <h2 style="margin:6px 0 4px">Masuk</h2>
+  <p class="petunjuk" style="margin-bottom:16px">Gunakan akun yang diberikan pemilik usaha.</p>
+
+  <% if (typeof err !== 'undefined' && err) { %>
+    <div class="pesan pesan-galat">⚠️ <%= err %></div>
+  <% } %>
+
+  <input type="hidden" name="dari" value="<%= dari %>">
+
+  <div class="grup">
+    <label for="username">Username</label>
+    <input type="text" id="username" name="username" class="kontrol" required autofocus
+           autocomplete="username" value="<%= typeof username !== 'undefined' ? username : '' %>">
+  </div>
+  <div class="grup">
+    <label for="sandi">Kata Sandi</label>
+    <input type="password" id="sandi" name="sandi" class="kontrol" required autocomplete="current-password">
+  </div>
+
+  <button type="submit" class="btn btn-primer btn-blok" style="padding:13px">MASUK</button>
+</form>
+</body>
+</html>

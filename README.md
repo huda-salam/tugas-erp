@@ -11,14 +11,44 @@ Stack: **Node.js + Express + EJS + SQLite**. Tanpa build step, tanpa server data
 
 ```bash
 npm install
-npm run seed:demo     # isi master data + 1 hari transaksi contoh
+npm run reset         # isi data contoh + akun bawaan
 npm start             # buka http://localhost:3000
 ```
 
-Selesai. Tidak ada MySQL/XAMPP yang perlu dipasang, tidak ada `.env` yang perlu diisi,
-tidak ada perintah migrate. Tabel dibuat otomatis saat aplikasi pertama kali jalan.
+Login dengan **`pemilik` / `pemilik123`**, lalu ganti sandinya lewat menu Akun.
+
+**Instalasi bersih tanpa data contoh:** cukup `npm install && npm start`. Karena folder
+`data/` masih kosong, aplikasi menampilkan **wizard penyiapan** — isi nama usaha, buat
+akun pemilik, pilih mau mulai kosong atau dengan data contoh, selesai. Tidak ada
+perintah terminal yang perlu dijalankan pemilik usaha.
 
 > **Pakai Node 20 atau lebih baru.** Cek dengan `node -v`.
+
+---
+
+## Akun & hak akses
+
+Dua peran:
+
+| | Pemilik | Kasir |
+|---|:---:|:---:|
+| Kasir, Pesanan, Stok | ✅ | ✅ |
+| Pembelian, Produksi, Penyesuaian | ✅ | — |
+| Buku kas, prive, laporan keuangan | ✅ | — |
+| Master data & kelola akun | ✅ | — |
+| Saldo kas di header | ✅ | disembunyikan |
+
+Pemilik menambah akun kasir lewat **Master Data → Pengguna**, dan bisa menonaktifkan
+akun atau menyetel ulang sandinya. Menonaktifkan langsung memutus sesi yang sedang
+berjalan, tidak menunggu kedaluwarsa.
+
+Catatan teknis: sandi di-hash dengan **scrypt** bawaan Node (bukan bcrypt, supaya tidak
+menambah modul native yang menyulitkan pemasangan di Termux/Android), dan sesi disimpan
+di tabel SQLite dengan cookie `HttpOnly; SameSite=Lax` — tanpa dependensi tambahan.
+Endpoint `/intake/*` **tidak** memakai sesi melainkan header `X-Intake-Token`, karena
+webhook dari luar tidak bisa login.
+
+---
 
 ## Daftar perintah
 
@@ -28,7 +58,7 @@ tidak ada perintah migrate. Tabel dibuat otomatis saat aplikasi pertama kali jal
 | `npm run dev` | Jalankan dengan auto-restart saat file diubah |
 | `npm run seed` | Isi master data saja (produk, bahan, resep, supplier, pelanggan) |
 | `npm run seed:demo` | Master data + transaksi contoh satu hari |
-| `npm run reset` | Hapus semua data lalu isi ulang dari nol |
+| `npm run reset` | Hapus semua data & akun, isi ulang dari nol + akun bawaan |
 | `npm run rebuild` | Perbaiki `better-sqlite3` kalau error saat install |
 
 Ganti port: `PORT=4000 npm start`
@@ -134,11 +164,13 @@ endpoint intake tetap hidup karena itu bagian yang nyata.
 
 ```
 src/
-  server.js      Semua route (Express)
+  server.js      Semua route (Express) + penjaga akses per peran
+  auth.js        Akun, sandi (scrypt), sesi
+  contoh.js      Data contoh — dipakai CLI seed maupun wizard penyiapan
   services.js    Logika bisnis: stok, HPP, kas, laporan  ← inti aplikasi
   schema.sql     Struktur tabel
   db.js          Koneksi SQLite, jalan otomatis saat boot
-  seed.js        Data awal & contoh transaksi
+  seed.js        Pembungkus CLI untuk contoh.js
 views/           Halaman EJS
   partials/      Header & navigasi bersama
 public/css/      Satu file CSS untuk semua halaman
