@@ -249,3 +249,47 @@ body.ada-bar{padding-bottom:140px}
   margin-top:12px; border:1px solid var(--garis)}
 .txt-kembalian{font-weight:700; font-size:15px; color:var(--hijau-teks);
   background:var(--hijau-muda); border-color:#abf5d1}
+
+/* =========================================================
+   Laporan keuangan — diport dari desain gemini-code laporan keuangan
+   ========================================================= */
+
+/* Kop laporan bergaya standar akuntansi */
+.report-header{text-align:center; border-bottom:3px double var(--teks);
+  padding-bottom:16px; margin-bottom:20px}
+.report-header h1{font-size:20px; color:var(--biru); text-transform:uppercase; line-height:1.2}
+.report-header h2{font-size:15px; color:var(--teks); margin-top:6px; font-weight:700}
+.report-header p{font-size:12px; color:var(--teks-lembut); font-style:italic; margin-top:3px}
+
+/* Tab laporan: abu, aktif biru penuh (lebih spesifik dari .tab-btn kasir) */
+.tabs-nav{display:flex; gap:8px; margin-bottom:18px; border-bottom:1px solid var(--garis);
+  padding-bottom:8px; overflow-x:auto}
+.tabs-nav .tab-btn{flex:1; min-width:130px; padding:10px 14px; font-size:13px; font-weight:600;
+  border:none; background:var(--garis); color:#42526e; border-radius:6px; cursor:pointer;
+  box-shadow:none; white-space:nowrap}
+.tabs-nav .tab-btn.active{background:var(--biru); color:#fff; box-shadow:none}
+
+.report-section{display:none}
+.report-section.active{display:block}
+
+/* Bagan akun berjenjang. Indentasi dipasang di sel keterangan supaya
+   benar-benar tampak — padding pada <tr> tidak berlaku di CSS. */
+.akun td{padding:10px; border-bottom:1px solid var(--abu)}
+.akun .level-1 td{font-weight:700; color:var(--teks); background:#fafbfc}
+.akun .level-2 td:nth-child(2){padding-left:25px; font-weight:600; color:#344563}
+.akun .level-3 td:nth-child(2){padding-left:45px; color:#42526e}
+.akun .kode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:11px; color:var(--teks-lembut); white-space:nowrap; width:76px}
+.akun .subtotal td{background:var(--abu); font-weight:700}
+
+/* Garis akuntansi: satu garis di atas, garis ganda di bawah */
+.total-acc-row td{border-top:1px solid var(--teks); border-bottom:4px double var(--teks);
+  font-weight:700; background:var(--abu)}
+
+.catatan-sak{font-size:12px; color:var(--teks-lembut); font-style:italic;
+  text-align:right; margin-top:12px}
+
+@media print{
+  .tabs-nav{display:none !important}
+  .report-section{display:block !important; margin-bottom:32px; page-break-inside:avoid}
+}

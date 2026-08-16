@@ -153,10 +153,21 @@ if (demo) {
   S.simpanBiaya({ tanggal: t, kategori: 'transportasi', keterangan: 'Bensin antar pesanan', jumlah: 25000 });
   S.simpanBiaya({ tanggal: t, kategori: 'gas & listrik', keterangan: 'Isi ulang gas LPG 3kg', jumlah: 22000 });
 
+  // Sisa jualan sore yang tidak laku, dibuang dan diakui sebagai kerugian
+  S.simpanWaste({
+    tanggal: t, item_tipe: 'produk', item_id: produkId['Bubur Bayi Pisang Susu'],
+    qty: 3, alasan: 'tidak laku / sisa hari ini',
+  });
+
+  // Pemilik mengambil uang untuk keperluan pribadi
+  S.simpanPrive({ tanggal: t, jumlah: 50000, keterangan: 'Ambil untuk belanja rumah' });
+
   const k = S.laporanKeuangan(t, t);
   console.log('✓ Transaksi contoh dibuat untuk', t);
   console.log('  Laba bersih :', Math.round(k.labaRugi.labaBersih).toLocaleString('id-ID'));
   console.log('  Total aset  :', Math.round(k.neraca.totalAset).toLocaleString('id-ID'));
   console.log('  Piutang Grab:', Math.round(k.neraca.piutang).toLocaleString('id-ID'), '(belum dicairkan)');
+  console.log('  Prive       :', Math.round(k.neraca.prive).toLocaleString('id-ID'));
+  console.log('  Waste       :', Math.round(-k.labaRugi.penyesuaian.waste).toLocaleString('id-ID'), '(kerugian)');
   console.log('  Neraca      :', k.neraca.seimbang ? 'SEIMBANG ✓' : 'TIDAK SEIMBANG ✗');
 }

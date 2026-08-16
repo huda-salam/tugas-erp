@@ -114,6 +114,14 @@ konsisten:
   Piutang ini tampil sebagai aset lancar di neraca.
 - **Buku kas adalah turunan transaksi,** bukan form input terpisah — supaya tidak bisa
   berbeda dengan laporan penjualan dan pembelian.
+- **Prive bukan beban.** Pengambilan pribadi pemilik mengurangi kas dan ekuitas, tapi
+  tidak mengurangi laba. Menyamakannya dengan biaya membuat laba usaha terlihat lebih
+  kecil dari yang sebenarnya.
+- **Waste dan stock opname tidak menyentuh kas.** Produk tidak laku yang dibuang dan
+  selisih hasil hitung fisik mengurangi (atau menambah) nilai persediaan, dan langsung
+  diakui sebagai kerugian/keuntungan di laba rugi. Uangnya memang sudah keluar saat
+  belanja bahan, jadi tidak boleh dicatat sebagai kas keluar lagi.
+- **Modal dan prive diturunkan dari mutasi kas,** tidak disimpan sebagai angka terpisah.
 
 Neraca menampilkan status **SEIMBANG / TIDAK SEIMBANG**. Kalau sampai tidak seimbang,
 berarti ada logika yang bocor — itu sinyal bug, bukan hal yang wajar.

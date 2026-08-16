@@ -320,6 +320,121 @@ const simpanPencairanGrab = db.transaction((data) => {
   return { id, jumlah, sisa: p.saldo - jumlah };
 });
 
+// ---------- PRIVE, WASTE, STOCK OPNAME ----------
+
+// Pengambilan pribadi pemilik. Mengurangi kas DAN ekuitas — bukan beban usaha,
+// jadi tidak boleh ikut mengurangi laba.
+const simpanPrive = db.transaction((data) => {
+  const tanggal = data.tanggal || hariIni();
+  const jumlah = num(data.jumlah);
+  if (jumlah <= 0) throw new Error('Nominal prive harus lebih dari nol.');
+
+  const kas = db.prepare(
+    "SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END),0) s FROM mutasi_kas").get().s;
+  if (jumlah > kas) {
+    throw new Error('Prive melebihi saldo kas (tersedia Rp ' + Math.round(kas).toLocaleString('id-ID') + ').');
+  }
+
+  insMutasiKas.run({
+    tanggal, tipe: 'keluar', kategori: 'prive',
+    keterangan: data.keterangan || 'Pengambilan pribadi pemilik',
+    jumlah, ref_tipe: 'prive', ref_id: null,
+  });
+  return { jumlah, sisaKas: kas - jumlah };
+});
+
+// Harga rata-rata satu item, dipakai untuk menilai waste & selisih opname.
+function hargaRataItem(tipe, id) {
+  const s = stok(tipe, id);
+  if (s.qty > 0) return s.nilai / s.qty;
+  const t = tipe === 'bahan'
+    ? db.prepare('SELECT harga_avg h FROM bahan WHERE id=?').get(id)
+    : db.prepare('SELECT hpp_avg h FROM produk WHERE id=?').get(id);
+  return t ? t.h : 0;
+}
+
+function namaItem(tipe, id) {
+  const t = tipe === 'bahan'
+    ? db.prepare('SELECT nama, satuan FROM bahan WHERE id=?').get(id)
+    : db.prepare('SELECT nama, satuan FROM produk WHERE id=?').get(id);
+  return t || { nama: '?', satuan: '' };
+}
+
+// Produk tidak laku / bahan rusak dibuang. Stok berkurang dan nilainya
+// langsung diakui sebagai kerugian pada laporan laba rugi.
+const simpanWaste = db.transaction((data) => {
+  const tanggal = data.tanggal || hariIni();
+  const tipe = data.item_tipe === 'bahan' ? 'bahan' : 'produk';
+  const id = Number(data.item_id);
+  const qty = num(data.qty);
+  if (!id) throw new Error('Item yang dibuang belum dipilih.');
+  if (qty <= 0) throw new Error('Jumlah yang dibuang harus lebih dari nol.');
+
+  const s = stok(tipe, id);
+  const it = namaItem(tipe, id);
+  if (s.qty < qty) {
+    throw new Error(`Stok ${it.nama} tidak cukup: tersedia ${s.qty} ${it.satuan}, dibuang ${qty}.`);
+  }
+
+  const nilai = qty * hargaRataItem(tipe, id);
+  insMutasiStok.run({
+    tanggal, item_tipe: tipe, item_id: id, qty: -qty, nilai: -nilai,
+    ref_tipe: 'waste', ref_id: null,
+    keterangan: 'Dibuang — ' + (data.alasan || 'tidak laku'),
+  });
+  return { nama: it.nama, satuan: it.satuan, qty, nilai };
+});
+
+// Stock opname: menyamakan catatan dengan hitungan fisik.
+// Selisihnya diakui sebagai kerugian (kurang) atau keuntungan (lebih).
+const simpanOpname = db.transaction((data) => {
+  const tanggal = data.tanggal || hariIni();
+  const tipe = data.item_tipe === 'produk' ? 'produk' : 'bahan';
+  const id = Number(data.item_id);
+  const fisik = num(data.qty_fisik, -1);
+  if (!id) throw new Error('Item belum dipilih.');
+  if (fisik < 0) throw new Error('Jumlah hasil hitung fisik belum diisi.');
+
+  const s = stok(tipe, id);
+  const selisih = fisik - s.qty;
+  const it = namaItem(tipe, id);
+  if (Math.abs(selisih) < 0.0001) {
+    return { nama: it.nama, satuan: it.satuan, sistem: s.qty, fisik, selisih: 0, nilai: 0 };
+  }
+
+  const nilai = selisih * hargaRataItem(tipe, id);
+  insMutasiStok.run({
+    tanggal, item_tipe: tipe, item_id: id, qty: selisih, nilai,
+    ref_tipe: 'opname', ref_id: null,
+    keterangan: `Stock opname: sistem ${s.qty} → fisik ${fisik}` + (data.alasan ? ' — ' + data.alasan : ''),
+  });
+  return { nama: it.nama, satuan: it.satuan, sistem: s.qty, fisik, selisih, nilai };
+});
+
+// Rekap waste & selisih opname untuk laporan laba rugi
+function penyesuaianPersediaan(dari, sampai) {
+  const q = db.prepare(`
+    SELECT COALESCE(SUM(nilai),0) s FROM mutasi_stok
+     WHERE ref_tipe = ? AND tanggal BETWEEN ? AND ?`);
+  const waste = q.get('waste', dari, sampai).s;    // negatif = rugi
+  const opname = q.get('opname', dari, sampai).s;  // negatif = kurang, positif = lebih
+  return { waste, opname, total: waste + opname };
+}
+
+function riwayatPenyesuaian(batas = 30) {
+  return db.prepare(`
+    SELECT m.*,
+           CASE m.item_tipe WHEN 'bahan'
+             THEN (SELECT nama FROM bahan  WHERE id = m.item_id)
+             ELSE (SELECT nama FROM produk WHERE id = m.item_id) END  AS nama,
+           CASE m.item_tipe WHEN 'bahan'
+             THEN (SELECT satuan FROM bahan  WHERE id = m.item_id)
+             ELSE (SELECT satuan FROM produk WHERE id = m.item_id) END AS satuan
+      FROM mutasi_stok m
+     WHERE m.ref_tipe IN ('waste','opname')
+     ORDER BY m.id DESC LIMIT ?`).all(batas);
+}
+
 // ---------- BIAYA & MODAL ----------
 const simpanBiaya = db.transaction((data) => {
   const tanggal = data.tanggal || hariIni();
@@ -343,7 +458,6 @@ const simpanModal = db.transaction((data) => {
     tanggal, tipe: 'masuk', kategori: 'modal',
     keterangan: data.keterangan || 'Setoran modal pemilik', jumlah, ref_tipe: 'modal', ref_id: null,
   });
-  setPengaturan('modal_disetor', num(pengaturan('modal_disetor', '0')) + jumlah);
   return { jumlah };
 });
 
@@ -428,7 +542,9 @@ function laporanKeuangan(dari, sampai) {
   const totalBeban = bebanRows.reduce((s, b) => s + b.jumlah, 0);
 
   const labaKotor = jual.netto - jual.hpp;
-  const labaBersih = labaKotor - totalBeban;
+  // waste & selisih opname bernilai negatif saat merugikan, jadi ditambahkan apa adanya
+  const penyesuaian = penyesuaianPersediaan(r.dari, r.sampai);
+  const labaBersih = labaKotor - totalBeban + penyesuaian.total;
 
   // --- Neraca per tanggal `sampai` (posisi kumulatif) ---
   const kas = db.prepare(`
@@ -443,7 +559,12 @@ function laporanKeuangan(dari, sampai) {
   const utang = db.prepare(`
     SELECT COALESCE(SUM(total),0) s FROM pembelian
      WHERE cara_bayar='utang' AND tanggal <= ?`).get(r.sampai).s;
-  const modal = num(pengaturan('modal_disetor', '0'));
+  // Modal & prive diturunkan dari mutasi kas, bukan disimpan terpisah
+  const qKas = db.prepare(`
+    SELECT COALESCE(SUM(jumlah),0) s FROM mutasi_kas
+     WHERE kategori = ? AND tipe = ? AND tanggal <= ?`);
+  const modal = qKas.get('modal', 'masuk', r.sampai).s;
+  const prive = qKas.get('prive', 'keluar', r.sampai).s;
 
   // Laba ditahan dihitung MANDIRI dari akumulasi transaksi sejak awal, bukan sebagai
   // angka penyeimbang. Dengan begitu status "seimbang" di bawah benar-benar menguji
@@ -453,16 +574,19 @@ function laporanKeuangan(dari, sampai) {
       FROM penjualan WHERE tanggal <= ?`).get(r.sampai);
   const biayaKum = db.prepare(
     "SELECT COALESCE(SUM(jumlah),0) s FROM biaya WHERE tanggal <= ?").get(r.sampai).s;
-  const labaDitahan = kum.netto - kum.hpp - biayaKum;
+  const penyKum = penyesuaianPersediaan('0000-01-01', r.sampai);
+  const labaDitahan = kum.netto - kum.hpp - biayaKum + penyKum.total;
 
   const piutang = piutangGrab(r.sampai).saldo;
   const totalAset  = kas + piutang + persBahan + persProduk;
-  const totalPasiva = utang + modal + labaDitahan;
+  const ekuitas    = modal - prive + labaDitahan;
+  const totalPasiva = utang + ekuitas;
 
   return {
     ...r,
-    labaRugi: { ...jual, bebanRows, totalBeban, labaKotor, labaBersih },
-    neraca: { kas, piutang, persBahan, persProduk, totalAset, utang, modal, labaDitahan, totalPasiva,
+    labaRugi: { ...jual, bebanRows, totalBeban, penyesuaian, labaKotor, labaBersih },
+    neraca: { kas, piutang, persBahan, persProduk, totalAset,
+              utang, modal, prive, labaDitahan, ekuitas, totalPasiva,
               seimbang: Math.abs(totalAset - totalPasiva) < 1 },
   };
 }
@@ -488,5 +612,6 @@ module.exports = {
   daftarBahanDenganStok, daftarProdukDenganStok, kebutuhanDariResep,
   simpanPembelian, simpanProduksi, simpanPesanan, simpanPenjualan, simpanBiaya, simpanModal,
   piutangGrab, simpanPencairanGrab,
+  simpanPrive, simpanWaste, simpanOpname, penyesuaianPersediaan, riwayatPenyesuaian, hargaRataItem,
   laporanPenjualan, laporanPembelianProduksi, bukuKas, laporanKeuangan, ringkasanDashboard,
 };

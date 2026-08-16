@@ -1,0 +1,240 @@
+<%- include('partials/atas') %>
+
+<div class="tabs-container">
+  <a href="/penyesuaian?tab=waste"  class="tab-btn <%= tab==='waste'  ? 'active':'' %>">🗑️ Buang / Waste</a>
+  <a href="/penyesuaian?tab=opname" class="tab-btn <%= tab==='opname' ? 'active':'' %>">⚖️ Stock Opname</a>
+</div>
+
+<% if (tab === 'waste') { %>
+  <div class="card">
+    <div class="card-head">
+      <div><h2>Buang Stok (Waste)</h2><p>Produk tidak laku atau bahan rusak</p></div>
+      <span class="badge-tipe bg-grab">Kerugian</span>
+    </div>
+
+    <form method="post" action="/penyesuaian/waste" id="form-waste">
+      <div class="baris">
+        <div class="grup" style="max-width:150px">
+          <label for="w-tgl">Tanggal</label>
+          <input type="date" id="w-tgl" name="tanggal" class="kontrol" value="<%= hariIni %>" required>
+        </div>
+        <div class="grup" style="max-width:170px">
+          <label for="w-tipe">Jenis Item</label>
+          <select id="w-tipe" name="item_tipe" class="kontrol" onchange="isiItem('w')">
+            <option value="produk">Produk Jadi</option>
+            <option value="bahan">Bahan Baku</option>
+          </select>
+        </div>
+        <div class="grup">
+          <label for="w-item">Item yang Dibuang</label>
+          <select id="w-item" name="item_id" class="kontrol" onchange="hitungW()" required></select>
+        </div>
+      </div>
+
+      <div class="baris">
+        <div class="grup" style="max-width:180px">
+          <label for="w-qty">Jumlah Dibuang</label>
+          <input type="number" id="w-qty" name="qty" class="kontrol" min="0" step="0.01" value="0"
+                 oninput="hitungW()" required>
+          <div class="petunjuk" id="w-stok">—</div>
+        </div>
+        <div class="grup">
+          <label for="w-alasan">Alasan</label>
+          <select id="w-alasan" name="alasan" class="kontrol">
+            <option>tidak laku / sisa hari ini</option>
+            <option>kedaluwarsa</option>
+            <option>rusak saat produksi</option>
+            <option>rusak saat pengiriman</option>
+            <option>sampel / tester</option>
+            <option>lain-lain</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pesan pesan-galat" id="w-nilai" style="display:none"></div>
+
+      <button type="submit" class="btn btn-bahaya btn-blok">CATAT PEMBUANGAN</button>
+      <p class="petunjuk">Stok berkurang dan nilainya langsung diakui sebagai kerugian di laporan
+         laba rugi. Tidak menyentuh kas, karena uangnya memang sudah keluar saat beli bahan.</p>
+    </form>
+  </div>
+
+<% } else { %>
+  <div class="card">
+    <div class="card-head">
+      <div><h2>Stock Opname</h2><p>Samakan catatan sistem dengan hitungan fisik</p></div>
+      <span class="badge-tipe bg-pesanan">Penyesuaian</span>
+    </div>
+
+    <form method="post" action="/penyesuaian/opname" id="form-opname">
+      <div class="baris">
+        <div class="grup" style="max-width:150px">
+          <label for="o-tgl">Tanggal</label>
+          <input type="date" id="o-tgl" name="tanggal" class="kontrol" value="<%= hariIni %>" required>
+        </div>
+        <div class="grup" style="max-width:170px">
+          <label for="o-tipe">Jenis Item</label>
+          <select id="o-tipe" name="item_tipe" class="kontrol" onchange="isiItem('o')">
+            <option value="bahan">Bahan Baku</option>
+            <option value="produk">Produk Jadi</option>
+          </select>
+        </div>
+        <div class="grup">
+          <label for="o-item">Item Dihitung</label>
+          <select id="o-item" name="item_id" class="kontrol" onchange="hitungO()" required></select>
+        </div>
+      </div>
+
+      <div class="baris">
+        <div class="grup">
+          <label>Jumlah Menurut Sistem</label>
+          <input type="text" id="o-sistem" class="kontrol" value="—" readonly>
+        </div>
+        <div class="grup">
+          <label for="o-fisik">Hasil Hitung Fisik</label>
+          <input type="number" id="o-fisik" name="qty_fisik" class="kontrol" min="0" step="0.01"
+                 oninput="hitungO()" required>
+        </div>
+        <div class="grup">
+          <label>Selisih</label>
+          <input type="text" id="o-selisih" class="kontrol" value="—" readonly>
+        </div>
+      </div>
+
+      <div class="grup">
+        <label for="o-alasan">Catatan / Dugaan Penyebab</label>
+        <input type="text" id="o-alasan" name="alasan" class="kontrol"
+               placeholder="Contoh: susut penyimpanan, salah timbang saat produksi">
+      </div>
+
+      <div class="pesan" id="o-info" style="display:none"></div>
+
+      <button type="submit" class="btn btn-primer btn-blok">SIMPAN HASIL OPNAME</button>
+      <p class="petunjuk">Selisih kurang diakui sebagai kerugian, selisih lebih sebagai keuntungan.
+         Keduanya masuk laporan laba rugi dan membuat neraca tetap seimbang.</p>
+    </form>
+  </div>
+<% } %>
+
+<div class="card">
+  <div class="card-head"><h2>Riwayat Penyesuaian</h2></div>
+  <% if (!riwayat.length) { %>
+    <p class="kosong">Belum ada pembuangan atau opname.</p>
+  <% } else { %>
+  <div class="tabel-scroll"><table>
+    <thead><tr>
+      <th>Tanggal</th><th class="tg">Jenis</th><th>Item</th>
+      <th>Keterangan</th><th class="ka">Qty</th><th class="ka">Nilai</th>
+    </tr></thead>
+    <tbody><% riwayat.forEach(m => { %>
+      <tr>
+        <td class="t-lembut"><%= m.tanggal %></td>
+        <td class="tg"><span class="badge <%= m.ref_tipe==='waste' ? 'b-merah':'b-biru' %>">
+          <%= m.ref_tipe==='waste' ? 'waste' : 'opname' %></span></td>
+        <td><strong><%= m.nama %></strong>
+            <span class="t-lembut">(<%= m.item_tipe %>)</span></td>
+        <td class="t-lembut" style="max-width:260px"><%= m.keterangan %></td>
+        <td class="ka <%= m.qty >= 0 ? 't-hijau':'t-merah' %>">
+          <%= m.qty >= 0 ? '+' : '' %><%= angka(m.qty) %> <%= m.satuan %></td>
+        <td class="ka <%= m.nilai >= 0 ? 't-hijau':'t-merah' %>"><%= rupiah(m.nilai) %></td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+</div>
+
+<script>
+const DATA = {
+  bahan:  <%- JSON.stringify(bahan.map(b => ({ id:b.id, nama:b.nama, satuan:b.satuan, stok:b.stok, harga:b.harga_avg }))) %>,
+  produk: <%- JSON.stringify(produk.map(p => ({ id:p.id, nama:p.nama, satuan:p.satuan, stok:p.stok, harga:p.hpp_avg }))) %>,
+};
+const rp = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+const ang = n => (Math.round(n * 100) / 100).toLocaleString('id-ID');
+
+// Harga rata-rata terkini dipakai kalau stok masih ada, kalau kosong pakai harga tersimpan
+function itemAktif(p) {
+  const tipe = document.getElementById(p + '-tipe').value;
+  const id = Number(document.getElementById(p + '-item').value);
+  return DATA[tipe].find(x => x.id === id);
+}
+
+function isiItem(p) {
+  const tipe = document.getElementById(p + '-tipe').value;
+  const sel = document.getElementById(p + '-item');
+  sel.innerHTML = DATA[tipe].length
+    ? DATA[tipe].map(x => `<option value="${x.id}">${x.nama} — sisa ${ang(x.stok)} ${x.satuan}</option>`).join('')
+    : '<option value="">(belum ada data)</option>';
+  p === 'w' ? hitungW() : hitungO();
+}
+
+function hitungW() {
+  const it = itemAktif('w');
+  const box = document.getElementById('w-nilai');
+  if (!it) { box.style.display = 'none'; return; }
+  document.getElementById('w-stok').innerText = `tersedia ${ang(it.stok)} ${it.satuan}`;
+  const qty = parseFloat(document.getElementById('w-qty').value) || 0;
+  if (qty <= 0) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  if (qty > it.stok) {
+    box.className = 'pesan pesan-galat';
+    box.innerHTML = `Melebihi stok. Tersedia hanya <strong>${ang(it.stok)} ${it.satuan}</strong>.`;
+  } else {
+    box.className = 'pesan pesan-galat';
+    box.innerHTML = `Kerugian yang dicatat: <strong>${rp(qty * it.harga)}</strong>
+      (${ang(qty)} ${it.satuan} × ${rp(it.harga)}).`;
+  }
+}
+
+function hitungO() {
+  const it = itemAktif('o');
+  const box = document.getElementById('o-info');
+  if (!it) { box.style.display = 'none'; return; }
+  document.getElementById('o-sistem').value = `${ang(it.stok)} ${it.satuan}`;
+
+  const el = document.getElementById('o-fisik');
+  if (el.value === '') {
+    document.getElementById('o-selisih').value = '—';
+    box.style.display = 'none';
+    return;
+  }
+  const fisik = parseFloat(el.value) || 0;
+  const selisih = fisik - it.stok;
+  const out = document.getElementById('o-selisih');
+  out.value = (selisih > 0 ? '+' : '') + ang(selisih) + ' ' + it.satuan;
+  out.style.color = selisih === 0 ? '' : (selisih < 0 ? 'var(--merah)' : 'var(--hijau-teks)');
+
+  box.style.display = 'block';
+  if (selisih === 0) {
+    box.className = 'pesan pesan-ok';
+    box.innerHTML = 'Cocok — tidak ada penyesuaian yang perlu disimpan.';
+  } else if (selisih < 0) {
+    box.className = 'pesan pesan-galat';
+    box.innerHTML = `Selisih <strong>kurang</strong> ${ang(-selisih)} ${it.satuan} →
+      kerugian <strong>${rp(-selisih * it.harga)}</strong>.`;
+  } else {
+    box.className = 'pesan pesan-ok';
+    box.innerHTML = `Selisih <strong>lebih</strong> ${ang(selisih)} ${it.satuan} →
+      keuntungan <strong>${rp(selisih * it.harga)}</strong>.`;
+  }
+}
+
+<% if (tab === 'waste') { %>
+isiItem('w');
+document.getElementById('form-waste').addEventListener('submit', e => {
+  const it = itemAktif('w');
+  const qty = parseFloat(document.getElementById('w-qty').value) || 0;
+  if (!it) { e.preventDefault(); alert('Belum ada item yang bisa dibuang.'); return; }
+  if (qty <= 0) { e.preventDefault(); alert('Jumlah yang dibuang belum diisi.'); return; }
+  if (qty > it.stok) { e.preventDefault(); alert('Jumlah melebihi stok yang tersedia.'); return; }
+  if (!confirm(`Buang ${ang(qty)} ${it.satuan} ${it.nama}?\nKerugian ${rp(qty * it.harga)} akan dicatat.`)) e.preventDefault();
+});
+<% } else { %>
+isiItem('o');
+document.getElementById('form-opname').addEventListener('submit', e => {
+  if (!itemAktif('o')) { e.preventDefault(); alert('Belum ada item yang bisa dihitung.'); return; }
+  if (document.getElementById('o-fisik').value === '') { e.preventDefault(); alert('Hasil hitung fisik belum diisi.'); }
+});
+<% } %>
+</script>
+
+<%- include('partials/bawah') %>

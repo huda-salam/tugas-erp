@@ -152,6 +152,25 @@
       <p class="petunjuk">Menambah kas dan ekuitas di neraca. Pakai ini untuk mengisi kas awal usaha.</p>
     </form>
   </div>
+
+  <div class="card" style="flex:1; min-width:280px">
+    <div class="card-head"><h2>Prive / Pengambilan Pemilik</h2></div>
+    <form method="post" action="/kas/prive"
+          onsubmit="return confirm('Catat pengambilan pribadi pemilik?')">
+      <div class="grup"><label for="pvt">Tanggal</label>
+        <input type="date" id="pvt" name="tanggal" class="kontrol" value="<%= hariIni %>"></div>
+      <div class="grup"><label for="pvket">Keterangan</label>
+        <input type="text" id="pvket" name="keterangan" class="kontrol"
+               placeholder="Contoh: ambil untuk belanja rumah" value="Pengambilan pribadi pemilik"></div>
+      <div class="grup"><label for="pvj">Jumlah (Rp)</label>
+        <input type="number" id="pvj" name="jumlah" class="kontrol" min="0" step="1000"
+               max="<%= Math.round(k.saldoAkhir) %>" required></div>
+      <button class="btn btn-abu btn-blok" style="background:#ffab00;color:#fff">CATAT PRIVE</button>
+      <p class="petunjuk">Uang usaha yang dipakai pemilik untuk keperluan pribadi.
+         Mengurangi kas dan ekuitas — <strong>bukan beban usaha</strong>, jadi tidak
+         mengurangi laba. Menyamakannya dengan biaya membuat laba terlihat lebih kecil dari sebenarnya.</p>
+    </form>
+  </div>
 </div>
 
 <%- include('partials/bawah') %>

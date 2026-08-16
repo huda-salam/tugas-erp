@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem ERP - Laporan Keuangan SAK Entitas Privat/UMKM</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f5f7;
+            color: #172b4d;
+            padding: 12px;
+        }
+
+        .financial-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* Kop Laporan Standar Akuntansi */
+        .report-header {
+            text-align: center;
+            border-bottom: 3px double #172b4d;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+
+        .report-header h1 {
+            font-size: 22px;
+            color: #0052cc;
+            text-transform: uppercase;
+        }
+
+        .report-header h2 {
+            font-size: 16px;
+            color: #172b4d;
+            margin-top: 4px;
+        }
+
+        .report-header p {
+            font-size: 13px;
+            color: #5e6c84;
+            font-style: italic;
+            margin-top: 2px;
+        }
+
+        .tabs-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dfe1e6;
+            padding-bottom: 8px;
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            background: #dfe1e6;
+            color: #42526e;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .tab-btn.active {
+            background: #0052cc;
+            color: white;
+        }
+
+        .report-section {
+            display: none;
+        }
+
+        .report-section.active {
+            display: block;
+        }
+
+        /* Desain Tabel Keuangan (Hierarkis/Berjenjang) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        th {
+            background-color: #f4f5f7;
+            color: #5e6c84;
+            font-weight: 600;
+            padding: 10px;
+            border-top: 1px solid #dfe1e6;
+            border-bottom: 2px solid #dfe1e6;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #f4f5f7;
+        }
+
+        /* Pengaturan Bagan Akun Berjenjang (Leveling) */
+        .level-1 { font-weight: bold; color: #172b4d; background-color: #fafbfc; }
+        .level-2 { padding-left: 25px; font-weight: 600; color: #344563; }
+        .level-3 { padding-left: 45px; color: #42526e; }
+
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        /* Aturan Garis Akuntansi (Single line top, double line bottom) */
+        .total-acc-row td {
+            border-top: 1px solid #172b4d;
+            border-bottom: 4px double #172b4d;
+            font-weight: bold;
+            background-color: #f4f5f7;
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-primary { background-color: #0052cc; color: white; }
+        .btn-secondary { background-color: #dfe1e6; color: #42526e; }
+
+        @media (min-width: 600px) {
+            body { padding: 20px; }
+            .financial-container { padding: 30px; }
+            .report-header h1 { font-size: 26px; }
+        }
+
+        @media print {
+            body { background-color: white; padding: 0; }
+            .financial-container { box-shadow: none; padding: 0; max-width: 100%; }
+            .tabs-nav, .action-bar { display: none; }
+            .report-section { display: block !important; margin-bottom: 40px; page-break-inside: avoid; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="financial-container">
+        <div class="report-header">
+            <h1 id="comp-name">Dapur Bubur Sehat</h1>
+            <h2 id="report-title-text">Laporan Keuangan Perusahaan</h2>
+            <p id="report-period">Periode yang Berakhir pada 31 Mei 2026</p>
+        </div>
+
+        <div class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('laba-rugi', this)">1. Laporan Laba Rugi</button>
+            <button class="tab-btn" onclick="switchTab('neraca', this)">2. Laporan Posisi Keuangan (Neraca)</button>
+        </div>
+
+        <div id="laba-rugi" class="report-section active">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kode Akun</th>
+                        <th>Keterangan Unsur Laporan</th>
+                        <th class="text-right">Nilai (IDR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="level-1">
+                        <td>4-0000</td>
+                        <td>PENDAPATAN UTAMA</td>
+                        <td class="text-right"></td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>4-1100</td>
+                        <td>Pendapatan Penjualan Bubur</td>
+                        <td class="text-right">Rp 370.000</td>
+                    </tr>
+                    
+                    <tr class="level-1">
+                        <td>5-0000</td>
+                        <td>BEBAN POKOK PENJUALAN (HPP)</td>
+                        <td class="text-right"></td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>5-1100</td>
+                        <td>Beban Bahan Baku Logistik</td>
+                        <td class="text-right">(Rp 45.000)</td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>5-1200</td>
+                        <td>Beban Kemasan & Plastik</td>
+                        <td class="text-right">(Rp 15.000)</td>
+                    </tr>
+
+                    <tr class="level-2" style="background-color: #f4f5f7;">
+                        <td></td>
+                        <td>LABA KOTOR</td>
+                        <td class="text-right" style="color: #36b37e;">Rp 310.000</td>
+                    </tr>
+
+                    <tr class="level-1">
+                        <td>6-0000</td>
+                        <td>BEBAN OPERASIONAL & ADMINISTRASI</td>
+                        <td class="text-right"></td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>6-1100</td>
+                        <td>Beban Operasional Komunikasi (WA Bisnis)</td>
+                        <td class="text-right">(Rp 10.000)</td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>6-1200</td>
+                        <td>Beban Transportasi & Kurir</td>
+                        <td class="text-right">(Rp 25.000)</td>
+                    </tr>
+
+                    <tr class="total-acc-row">
+                        <td></td>
+                        <td>LABA BERSIH (PENGHASILAN BERSIH) TAHUN BERJALAN</td>
+                        <td class="text-right" id="val-laba-bersih">Rp 275.000</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="neraca" class="report-section">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kode Akun</th>
+                        <th>Posisi Aset (Aktiva)</th>
+                        <th class="text-right">Nilai (IDR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="level-1">
+                        <td>1-0000</td>
+                        <td>ASET LANCAR</td>
+                        <td class="text-right"></td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>1-1100</td>
+                        <td>Kas dan Setara Kas (Kas di Tangan)</td>
+                        <td class="text-right">Rp 410.000</td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>1-1200</td>
+                        <td>Persediaan Bahan Baku Bubur</td>
+                        <td class="text-right">Rp 65.000</td>
+                    </tr>
+                    <tr class="total-acc-row">
+                        <td></td>
+                        <td>TOTAL ASET (AKTIVA)</td>
+                        <td class="text-right">Rp 475.000</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Kode Akun</th>
+                        <th>Liabilitas & Ekuitas (Pasiva)</th>
+                        <th class="text-right">Nilai (IDR)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="level-1">
+                        <td>2-0000</td>
+                        <td>LIABILITAS (UTANG)</td>
+                        <td class="text-right"></td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>2-1100</td>
+                        <td>Utang Usaha / Pemasok Bahan</td>
+                        <td class="text-right">Rp 0</td>
+                    </tr>
+                    
+                    <tr class="level-1">
+                        <td>3-0000</td>
+                        <td>EKUITAS (MODAL)</td>
+                        <td class="text-right"></td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>3-1100</td>
+                        <td>Modal Pemilik / Modal Disetor</td>
+                        <td class="text-right">Rp 200.000</td>
+                    </tr>
+                    <tr class="level-3">
+                        <td>3-1200</td>
+                        <td>Laba Ditahan / Laba Tahun Berjalan</td>
+                        <td class="text-right" style="color:#0052cc; font-weight:600;">Rp 275.000</td>
+                    </tr>
+                    <tr class="total-acc-row">
+                        <td></td>
+                        <td>TOTAL LIABILITAS DAN EKUITAS (PASIVA)</td>
+                        <td class="text-right" id="val-pasiva">Rp 475.000</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <p style="font-size:12px; color:#5e6c84; font-style:italic; text-align:right;">
+                * Status Validasi SAK: <strong>BALANCE / SEIMBANG</strong>
+            </p>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn btn-secondary" onclick="window.print()">Cetak Laporan Fisik</button>
+            <button class="btn btn-primary" onclick="alert('Laporan Keuangan ditutup dan berhasil diarsip.')">Kunci Buku Tahunan</button>
+        </div>
+    </div>
+
+    <script>
+        // Logika Pengendali Tab Layar Atas
+        function switchTab(tabId, element) {
+            // Sembunyikan semua section laporan
+            const sections = document.querySelectorAll('.report-section');
+            sections.forEach(sec => sec.classList.remove('active'));
+
+            // Nonaktifkan semua gaya tombol tab
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            // Aktifkan tab yang dipilih pengguna
+            document.getElementById(tabId).classList.add('active');
+            element.classList.add('active');
+
+            // Perbarui sub-judul teks laporan
+            const titleText = document.getElementById('report-title-text');
+            if(tabId === 'laba-rugi') {
+                titleText.innerText = "Laporan Laba Rugi Bersih Harian";
+            } else {
+                titleText.innerText = "Laporan Posisi Keuangan (Neraca Harian)";
+            }
+        }
+    </script>
+</body>
+</html>

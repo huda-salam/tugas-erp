@@ -36,11 +36,14 @@ app.use((req, res, next) => {
 
 // bungkus handler supaya galat jadi redirect dengan pesan, bukan stack trace
 const aman = (tujuan, fn) => (req, res) => {
+  // tujuan bisa sudah membawa query (mis. /penyesuaian?tab=opname), jadi pemisahnya menyesuaikan
+  const gabung = (kunci, isi) =>
+    `${tujuan}${tujuan.includes('?') ? '&' : '?'}${kunci}=${encodeURIComponent(isi)}`;
   try {
     const pesan = fn(req, res);
-    if (!res.headersSent) res.redirect(`${tujuan}?ok=${encodeURIComponent(pesan || 'Tersimpan.')}`);
+    if (!res.headersSent) res.redirect(gabung('ok', pesan || 'Tersimpan.'));
   } catch (e) {
-    res.redirect(`${tujuan}?err=${encodeURIComponent(e.message)}`);
+    res.redirect(gabung('err', e.message));
   }
 };
 
@@ -302,6 +305,11 @@ app.post('/kas/biaya', aman('/kas', (req) => {
   return 'Biaya operasional tercatat.';
 }));
 
+app.post('/kas/prive', aman('/kas', (req) => {
+  const r = S.simpanPrive(req.body);
+  return `Prive ${rupiah(r.jumlah)} tercatat. Sisa kas ${rupiah(r.sisaKas)}.`;
+}));
+
 app.post('/kas/pencairan-grab', aman('/kas', (req) => {
   const r = S.simpanPencairanGrab(req.body);
   return `Pencairan ${rupiah(r.jumlah)} masuk kas. Sisa saldo Grab ${rupiah(r.sisa)}.`;
@@ -310,6 +318,30 @@ app.post('/kas/pencairan-grab', aman('/kas', (req) => {
 app.post('/kas/modal', aman('/kas', (req) => {
   const r = S.simpanModal(req.body);
   return `Setoran modal ${rupiah(r.jumlah)} tercatat.`;
+}));
+
+// ============ PENYESUAIAN STOK (waste & opname) ============
+app.get('/penyesuaian', (req, res) => {
+  const tab = req.query.tab === 'opname' ? 'opname' : 'waste';
+  res.render('penyesuaian', {
+    judul: 'Penyesuaian Stok', tab,
+    bahan: S.daftarBahanDenganStok(),
+    produk: S.daftarProdukDenganStok('retail'),
+    riwayat: S.riwayatPenyesuaian(30),
+  });
+});
+
+app.post('/penyesuaian/waste', aman('/penyesuaian', (req) => {
+  const r = S.simpanWaste(req.body);
+  return `${r.qty} ${r.satuan} ${r.nama} dibuang. Kerugian ${rupiah(r.nilai)} masuk laporan laba rugi.`;
+}));
+
+app.post('/penyesuaian/opname', aman('/penyesuaian?tab=opname', (req) => {
+  const r = S.simpanOpname(req.body);
+  if (r.selisih === 0) return `${r.nama} sudah cocok: sistem dan fisik sama-sama ${r.sistem} ${r.satuan}.`;
+  const arah = r.selisih < 0 ? 'kurang' : 'lebih';
+  return `${r.nama} disesuaikan: sistem ${r.sistem} → fisik ${r.fisik} ${r.satuan} ` +
+         `(${arah} ${Math.abs(r.selisih)}, nilai ${rupiah(Math.abs(r.nilai))}).`;
 }));
 
 // ============ LAPORAN ============
