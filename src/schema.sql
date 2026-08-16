@@ -208,6 +208,42 @@ CREATE TABLE IF NOT EXISTS biaya (
   dibuat_pada TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
 
+-- ============ INTAKE PESANAN DARI KANAL LUAR ============
+-- Log mentah tiap kiriman yang masuk (WhatsApp / GrabFood), dicatat SEBELUM diolah
+-- supaya bisa ditelusuri dan diputar ulang kalau parser salah baca.
+CREATE TABLE IF NOT EXISTS pesan_masuk (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  sumber         TEXT NOT NULL,          -- whatsapp | grab
+  ref_luar       TEXT NOT NULL,          -- id pesan / nomor order dari sistem asal
+  pengirim       TEXT,                   -- nomor WA atau nama driver
+  isi_mentah     TEXT,                   -- teks apa adanya
+  payload        TEXT,                   -- JSON asli
+  status         TEXT NOT NULL DEFAULT 'diproses',  -- diproses | draft | gagal
+  pesanan_id     INTEGER REFERENCES pesanan(id),
+  catatan_parser TEXT,
+  diterima_pada  TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+  -- kunci idempotensi: kiriman ulang dengan ref yang sama tidak membuat pesanan kedua
+  UNIQUE (sumber, ref_luar)
+);
+CREATE INDEX IF NOT EXISTS idx_pesan_masuk_sumber ON pesan_masuk(sumber, diterima_pada);
+
+-- Draft percakapan WhatsApp yang menunggu balasan "YA" dari pelanggan
+CREATE TABLE IF NOT EXISTS wa_sesi (
+  pengirim    TEXT PRIMARY KEY,
+  draft       TEXT NOT NULL,             -- JSON hasil parser
+  dibuat_pada TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+
+-- Pemetaan kode produk milik kanal luar ke produk kita.
+-- Order dari luar membawa kode miliknya sendiri, bukan id kita.
+CREATE TABLE IF NOT EXISTS produk_kanal_ref (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  produk_id INTEGER NOT NULL REFERENCES produk(id) ON DELETE CASCADE,
+  kanal     TEXT NOT NULL,
+  kode_luar TEXT NOT NULL,
+  UNIQUE (kanal, kode_luar)
+);
+
 CREATE TABLE IF NOT EXISTS pengaturan (
   kunci TEXT PRIMARY KEY,
   nilai TEXT NOT NULL

@@ -75,6 +75,61 @@ yang sudah terbentuk (skema pakai `CREATE TABLE IF NOT EXISTS`).
 
 ---
 
+## Simulasi pemesanan WhatsApp & GrabFood
+
+Buka menu **📱 Simulasi** (tab baru) — ada bingkai ponsel berisi dua aplikasi.
+Sandingkan dengan tab **Kasir**: pesanan yang dibuat di simulator muncul di sana
+seketika lewat Server-Sent Events, tanpa refresh.
+
+### Terus terang soal batasannya
+
+GrabFood **tidak menyediakan API publik untuk merchant UMKM** — GrabFood Partner API
+hanya untuk vendor POS berbadan usaha dengan perjanjian kerja sama. Jadi kanal Grab di
+sini memang simulasi, dan tidak ada cara mengubahnya dari sisi kita. WhatsApp punya
+jalur resmi (Cloud API), hanya saja butuh akun Meta Business, nomor terverifikasi, dan
+tunnel HTTPS publik.
+
+Yang **nyata** adalah lapisan penerimaannya. Simulator bukan fitur, melainkan salah satu
+klien yang memanggil endpoint intake:
+
+```
+simulator (atau webhook asli) → POST /intake/{whatsapp,grab}
+  → dicatat mentah di pesan_masuk → parser/pemetaan → simpanPesanan() → antrean kasir
+```
+
+Mengganti simulator dengan integrasi sungguhan cukup mengarahkan webhook ke endpoint
+yang sama; inti aplikasi tidak berubah. Endpoint-nya berdiri sendiri:
+
+```bash
+# GrabFood — payload terstruktur, kode item dipetakan lewat tabel produk_kanal_ref
+curl -X POST http://localhost:3000/intake/grab \
+  -H 'X-Intake-Token: procil-dev' -H 'Content-Type: application/json' \
+  -d '{"order_id":"GF-7001","driver":"Ahmad","items":[{"kode":"BBM","qty":2}]}'
+
+# WhatsApp — teks bebas, dibaca parser lalu dikonfirmasi pelanggan
+curl -X POST http://localhost:3000/intake/whatsapp \
+  -H 'X-Intake-Token: procil-dev' -H 'Content-Type: application/json' \
+  -d '{"pengirim":"0812-1111-2222","teks":"2 bubur beras merah, 1 pisang susu","ref_luar":"WA-1"}'
+```
+
+### Yang sengaja dibuat seperti integrasi sungguhan
+
+- **Idempoten.** `pesan_masuk` punya `UNIQUE(sumber, ref_luar)`. Webhook yang terkirim
+  dua kali tidak membuat pesanan kedua — coba tombol "Kirim ulang order terakhir".
+- **Semua kiriman dicatat mentah** sebelum diolah, termasuk yang gagal, supaya bisa
+  ditelusuri saat parser salah baca.
+- **Kode item kanal luar dipetakan** lewat `produk_kanal_ref`, bukan menebak dari nama.
+- **Endpoint dilindungi** header `X-Intake-Token` (env `INTAKE_TOKEN`).
+- **WhatsApp minta konfirmasi.** Teks bebas dibaca parser, dibalas rincian + total,
+  pesanan baru dibuat setelah pelanggan membalas `YA` — seperti praktik UMKM sungguhan.
+- **WhatsApp adalah *sumber*, bukan kanal penjualan.** Pesanan WA masuk sebagai PO biasa
+  (`kanal='pesanan'`, `sumber='whatsapp'`) sehingga tidak mengacaukan laporan per kanal.
+
+Matikan simulator dengan `SIMULASI=0 npm start`: menu dan halaman `/simulasi` hilang,
+endpoint intake tetap hidup karena itu bagian yang nyata.
+
+---
+
 ## Struktur folder
 
 ```

@@ -10,6 +10,7 @@ const reset = process.argv.includes('--reset');
 if (reset) {
   db.exec(`DELETE FROM mutasi_stok; DELETE FROM mutasi_kas; DELETE FROM biaya;
            DELETE FROM pencairan_grab;
+           DELETE FROM pesan_masuk; DELETE FROM wa_sesi; DELETE FROM produk_kanal_ref;
            DELETE FROM penjualan_detail; DELETE FROM penjualan;
            DELETE FROM pesanan_detail;   DELETE FROM pesanan;
            DELETE FROM produksi_hasil;   DELETE FROM produksi_bahan; DELETE FROM produksi;
@@ -36,7 +37,8 @@ const supplierId = {};
 
 const insPel = db.prepare('INSERT INTO pelanggan (nama,telp) VALUES (?,?)');
 const pelangganId = {};
-[['Ibu Linda', '0812-1111-2222'], ['Bapak Rahmat (Catering)', '0813-3333-4444'], ['Posyandu Melati', null]]
+[['Ibu Linda', '0812-1111-2222'], ['Bapak Rahmat (Catering)', '0813-3333-4444'],
+ ['Posyandu Melati', '0857-5555-6666']]
   .forEach(([n, t]) => { pelangganId[n] = insPel.run(n, t).lastInsertRowid; });
 
 // satuan sengaja kecil (gram/ml) supaya pemakaian di resep akurat
@@ -75,6 +77,11 @@ const resep = {
 for (const [p, list] of Object.entries(resep)) {
   for (const [b, q] of list) insResep.run(produkId[p], bahanId[b], q);
 }
+
+// Kode item milik GrabFood. Order dari luar membawa kode miliknya, bukan id kita.
+const insRef = db.prepare('INSERT INTO produk_kanal_ref (produk_id,kanal,kode_luar) VALUES (?,?,?)');
+[['Bubur Bayi Beras Merah', 'BBM'], ['Bubur Bayi Pisang Susu', 'BBPS'], ['Puree Wortel Organik', 'PWO']]
+  .forEach(([nama, kode]) => insRef.run(produkId[nama], 'grab', kode));
 
 console.log('✓ Master data terisi: 3 produk, 7 bahan, resep, 3 supplier, 3 pelanggan');
 

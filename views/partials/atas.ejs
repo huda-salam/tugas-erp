@@ -21,6 +21,9 @@
   <a href="/laporan/pembelian-produksi"  class="<%= jalur === '/laporan/pembelian-produksi' ? 'on' : '' %>"><i>🏭</i>Lap. Produksi</a>
   <a href="/laporan/keuangan"            class="<%= jalur === '/laporan/keuangan' ? 'on' : '' %>"><i>📊</i>Keuangan</a>
   <a href="/master"    class="<%= jalur.startsWith('/master') ? 'on' : '' %>"><i>⚙️</i>Master</a>
+<% if (simulasi) { %>
+  <a href="/simulasi" target="_blank" rel="noopener" class="nav-simulasi"><i>📱</i>Simulasi</a>
+<% } %>
 </nav>
 
 <header class="topbar">

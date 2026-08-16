@@ -2,6 +2,12 @@ const path = require('path');
 const express = require('express');
 const db = require('./db');
 const S = require('./services');
+const IN = require('./intake');
+const sse = require('./sse');
+
+// Simulator hanya alat peraga; bisa dimatikan lewat env di pemakaian sungguhan.
+const SIMULASI = process.env.SIMULASI !== '0';
+const INTAKE_TOKEN = process.env.INTAKE_TOKEN || 'procil-dev';
 
 const app = express();
 app.set('view engine', 'ejs');
@@ -31,6 +37,7 @@ app.use((req, res, next) => {
   res.locals.saldoKas = db.prepare(
     "SELECT COALESCE(SUM(CASE WHEN tipe='masuk' THEN jumlah ELSE -jumlah END),0) s FROM mutasi_kas").get().s;
   res.locals.adaBar = false;
+  res.locals.simulasi = SIMULASI;
   next();
 });
 
@@ -319,6 +326,74 @@ app.post('/kas/modal', aman('/kas', (req) => {
   const r = S.simpanModal(req.body);
   return `Setoran modal ${rupiah(r.jumlah)} tercatat.`;
 }));
+
+// ============ INTAKE KANAL LUAR + REALTIME ============
+// Endpoint ini yang nanti dipanggil webhook asli. Simulator di /simulasi hanya
+// salah satu kliennya, jadi mengganti simulator dengan integrasi sungguhan
+// tidak menyentuh inti aplikasi.
+function periksaToken(req, res) {
+  if (req.get('X-Intake-Token') !== INTAKE_TOKEN) {
+    res.status(401).json({ ok: false, pesan: 'Token intake tidak valid.' });
+    return false;
+  }
+  return true;
+}
+
+// Disiarkan SETELAH transaksi commit, bukan di dalamnya
+function kabarkanPesanan(id, sumber) {
+  if (!id) return;
+  const p = db.prepare(`
+    SELECT p.id, p.no_pesanan, p.kanal, p.total, p.ref_luar,
+           COALESCE(c.nama,'Umum') pelanggan,
+           (SELECT GROUP_CONCAT(pr.nama || ' x' || CAST(d.qty AS INT), ', ')
+              FROM pesanan_detail d JOIN produk pr ON pr.id=d.produk_id WHERE d.pesanan_id=p.id) isi
+      FROM pesanan p LEFT JOIN pelanggan c ON c.id=p.pelanggan_id WHERE p.id=?`).get(id);
+  if (p) sse.siarkan('pesanan-baru', { ...p, sumber });
+}
+
+app.get('/events', (req, res) => sse.pasang(req, res));
+
+app.post('/intake/whatsapp', (req, res) => {
+  if (!periksaToken(req, res)) return;
+  try {
+    const r = IN.terimaWhatsApp(req.body || {});
+    kabarkanPesanan(r.duplikat ? null : r.pesanan_id, 'whatsapp');
+    res.json({ ok: true, ...r });
+  } catch (e) {
+    res.status(400).json({ ok: false, pesan: e.message });
+  }
+});
+
+app.post('/intake/grab', (req, res) => {
+  if (!periksaToken(req, res)) return;
+  try {
+    const r = IN.terimaGrab(req.body || {});
+    if (r.gagal) return res.status(400).json({ ok: false, ...r });
+    kabarkanPesanan(r.duplikat ? null : r.pesanan_id, 'grab');
+    res.json({ ok: true, ...r });
+  } catch (e) {
+    res.status(400).json({ ok: false, pesan: e.message });
+  }
+});
+
+app.get('/simulasi', (req, res) => {
+  if (!SIMULASI) {
+    return res.status(404).render('galat', { judul: 'Tidak ditemukan', pesan: 'Simulator dimatikan.' });
+  }
+  res.render('simulasi', {
+    judul: 'Simulasi Pemesanan',
+    produkPesanan: S.daftarProdukDenganStok('pesanan'),
+    produkGrab: db.prepare(`
+      SELECT p.id, p.nama, p.satuan, COALESCE(h.harga,0) harga, r.kode_luar
+        FROM produk p
+        LEFT JOIN produk_harga h ON h.produk_id=p.id AND h.kanal='grab'
+        JOIN produk_kanal_ref r ON r.produk_id=p.id AND r.kanal='grab'
+       WHERE p.aktif=1 ORDER BY p.nama`).all(),
+    pelanggan: db.prepare("SELECT nama, telp FROM pelanggan WHERE telp IS NOT NULL ORDER BY nama LIMIT 5").all(),
+    token: INTAKE_TOKEN,
+    masuk: IN.daftarPesanMasuk(15),
+  });
+});
 
 // ============ PENYESUAIAN STOK (waste & opname) ============
 app.get('/penyesuaian', (req, res) => {

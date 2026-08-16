@@ -21,5 +21,6 @@ function tambahKolom(tabel, kolom, definisi) {
 }
 tambahKolom('pesanan', 'kanal', "TEXT NOT NULL DEFAULT 'pesanan'");
 tambahKolom('pesanan', 'ref_luar', 'TEXT');
+tambahKolom('pesanan', 'sumber', "TEXT NOT NULL DEFAULT 'manual'");
 
 module.exports = db;

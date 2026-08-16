@@ -204,16 +204,18 @@ const simpanPesanan = db.transaction((data) => {
   const noPesanan = nomorDokumen('PO', 'pesanan', 'no_pesanan', tanggal);
 
   const kanal = data.kanal === 'grab' ? 'grab' : 'pesanan';
+  // sumber = dari mana pesanan ini datang: manual | whatsapp | grab
+  const sumber = ['whatsapp', 'grab'].includes(data.sumber) ? data.sumber : 'manual';
   const { lastInsertRowid: id } = db.prepare(
-    `INSERT INTO pesanan (no_pesanan,tanggal,tanggal_kirim,pelanggan_id,kanal,ref_luar,status,total,catatan)
-     VALUES (?,?,?,?,?,?,'baru',?,?)`
+    `INSERT INTO pesanan (no_pesanan,tanggal,tanggal_kirim,pelanggan_id,kanal,sumber,ref_luar,status,total,catatan)
+     VALUES (?,?,?,?,?,?,?,'baru',?,?)`
   ).run(noPesanan, tanggal, data.tanggal_kirim || null, data.pelanggan_id || null,
-        kanal, data.ref_luar || null, total, data.catatan || null);
+        kanal, sumber, data.ref_luar || null, total, data.catatan || null);
 
   const ins = db.prepare('INSERT INTO pesanan_detail (pesanan_id,produk_id,qty,harga,subtotal) VALUES (?,?,?,?,?)');
   for (const i of items) ins.run(id, i.produk_id, num(i.qty), num(i.harga), num(i.qty) * num(i.harga));
 
-  return { id, no_pesanan: noPesanan, total, kanal };
+  return { id, no_pesanan: noPesanan, total, kanal, sumber };
 });
 
 // ---------- PENJUALAN ----------

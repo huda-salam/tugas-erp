@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulasi Pemesanan · <%= namaUsaha %></title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="sim-body">
+
+<div class="sim-pita">
+  ⚠️ SIMULASI — alat peraga, bukan sambungan asli ke WhatsApp/GrabFood.
+  Buka <a href="/kasir?kanal=pesanan" target="_blank" rel="noopener">layar kasir</a> di tab lain untuk melihat pesanan masuk seketika.
+</div>
+
+<div class="sim-panggung">
+  <div class="hp">
+    <div class="hp-notch"></div>
+
+    <div class="hp-layar">
+      <!-- ================= WHATSAPP ================= -->
+      <section id="app-wa" class="hp-app">
+        <header class="wa-head">
+          <span class="wa-avatar">🍲</span>
+          <div>
+            <div class="wa-nama"><%= namaUsaha %></div>
+            <div class="wa-status">online</div>
+          </div>
+        </header>
+
+        <div class="wa-chat" id="wa-chat">
+          <div class="wa-tanggal">Hari ini</div>
+          <div class="gelembung masuk">Halo! Selamat datang di <%= namaUsaha %> 🙏<br>
+            Silakan ketik pesanan Anda, contoh:<br><em>2 bubur beras merah, 1 pisang susu</em></div>
+        </div>
+
+        <div class="wa-chips" id="wa-chips">
+          <button type="button" onclick="isiChip(this)">2 bubur beras merah, 1 pisang susu</button>
+          <button type="button" onclick="isiChip(this)">3 puree wortel</button>
+          <button type="button" onclick="isiChip(this)">bubur pisang susu x4 dan 2 beras merah</button>
+          <button type="button" onclick="isiChip(this)">5 nasi goreng</button>
+          <button type="button" onclick="isiChip(this)">YA</button>
+        </div>
+
+        <form class="wa-ketik" id="wa-form" onsubmit="kirimWA(event)">
+          <select id="wa-nomor" class="wa-nomor" title="Nomor pengirim">
+            <% pelanggan.forEach(p => { %>
+              <option value="<%= p.telp %>"><%= p.nama %></option>
+            <% }) %>
+            <option value="0899-0000-0001">Pelanggan baru</option>
+          </select>
+          <input type="text" id="wa-teks" placeholder="Ketik pesan…" autocomplete="off" required>
+          <button type="submit" title="Kirim">➤</button>
+        </form>
+      </section>
+
+      <!-- ================= GRABFOOD ================= -->
+      <section id="app-grab" class="hp-app" hidden>
+        <header class="grab-head">
+          <div class="grab-logo">Grab<span>Food</span></div>
+          <div class="grab-toko"><%= namaUsaha %></div>
+        </header>
+
+        <div class="grab-isi">
+          <% if (!produkGrab.length) { %>
+            <p class="kosong">Belum ada produk yang dipetakan ke GrabFood.</p>
+          <% } %>
+          <% produkGrab.forEach(p => { %>
+            <div class="grab-item">
+              <div>
+                <div class="grab-nama"><%= p.nama %></div>
+                <div class="grab-harga"><%= rupiah(p.harga) %>
+                  <span class="grab-kode"><%= p.kode_luar %></span></div>
+              </div>
+              <div class="counter-container">
+                <button type="button" class="btn-counter" onclick="ubahGrab(<%= p.id %>,-1)">−</button>
+                <input type="number" class="qty-input" id="g<%= p.id %>" value="0" min="0"
+                       data-kode="<%= p.kode_luar %>" data-harga="<%= p.harga %>" oninput="hitungGrab()">
+                <button type="button" class="btn-counter" onclick="ubahGrab(<%= p.id %>,1)">+</button>
+              </div>
+            </div>
+          <% }) %>
+
+          <div class="grup" style="margin-top:14px">
+            <label for="grab-driver">Driver</label>
+            <input type="text" id="grab-driver" class="kontrol" value="Ahmad Subarjo">
+          </div>
+          <div class="grup">
+            <label for="grab-catatan">Catatan pelanggan</label>
+            <input type="text" id="grab-catatan" class="kontrol" placeholder="Opsional">
+          </div>
+
+          <div id="grab-hasil"></div>
+        </div>
+
+        <div class="grab-bawah">
+          <div>
+            <div class="grab-label" id="grab-info">0 item</div>
+            <div class="grab-total" id="grab-total">Rp 0</div>
+          </div>
+          <button type="button" class="btn btn-sukses" onclick="kirimGrab(false)">Pesan Sekarang</button>
+        </div>
+        <button type="button" class="grab-ulang" onclick="kirimGrab(true)"
+                title="Memperagakan webhook yang terkirim dua kali">🔁 Kirim ulang order terakhir</button>
+      </section>
+    </div>
+
+    <div class="hp-tab">
+      <button type="button" id="tab-wa" class="aktif" onclick="gantiApp('wa')">💬 WhatsApp</button>
+      <button type="button" id="tab-grab" onclick="gantiApp('grab')">🛵 GrabFood</button>
+    </div>
+  </div>
+
+  <aside class="sim-log">
+    <h2>Yang diterima server</h2>
+    <p class="petunjuk">Setiap kiriman dicatat mentah di tabel <code>pesan_masuk</code> sebelum diolah,
+       lalu diteruskan ke <code>simpanPesanan()</code> — jalur yang sama dengan webhook asli.</p>
+    <div id="log-isi">
+      <% if (!masuk.length) { %><p class="kosong">Belum ada kiriman.</p><% } %>
+      <% masuk.forEach(m => { %>
+        <div class="log-baris">
+          <span class="badge <%= m.sumber==='grab'?'b-ungu':'b-hijau' %>"><%= m.sumber %></span>
+          <span class="mono"><%= m.ref_luar %></span>
+          <span class="badge <%= m.status==='diproses'?'b-biru':(m.status==='gagal'?'b-merah':'b-kuning') %>"><%= m.status %></span>
+          <% if (m.no_pesanan) { %><strong><%= m.no_pesanan %></strong><% } %>
+        </div>
+      <% }) %>
+    </div>
+  </aside>
+</div>
+
+<script>
+const TOKEN = '<%= token %>';
+const rp = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+let orderTerakhir = null;
+
+function gantiApp(a) {
+  document.getElementById('app-wa').hidden = a !== 'wa';
+  document.getElementById('app-grab').hidden = a !== 'grab';
+  document.getElementById('tab-wa').classList.toggle('aktif', a === 'wa');
+  document.getElementById('tab-grab').classList.toggle('aktif', a === 'grab');
+}
+
+async function kirim(jalur, data) {
+  const res = await fetch(jalur, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Intake-Token': TOKEN },
+    body: JSON.stringify(data),
+  });
+  return { status: res.status, body: await res.json() };
+}
+
+function catatLog(sumber, ref, status, extra) {
+  const box = document.getElementById('log-isi');
+  const kosong = box.querySelector('.kosong');
+  if (kosong) kosong.remove();
+  const d = document.createElement('div');
+  d.className = 'log-baris baru';
+  const warna = status === 'diproses' ? 'b-biru' : (status === 'gagal' ? 'b-merah' : 'b-kuning');
+  d.innerHTML = `<span class="badge ${sumber === 'grab' ? 'b-ungu' : 'b-hijau'}">${sumber}</span>
+    <span class="mono">${ref}</span><span class="badge ${warna}">${status}</span>
+    ${extra ? '<strong>' + extra + '</strong>' : ''}`;
+  box.prepend(d);
+}
+
+// ---------------- WhatsApp ----------------
+function bubble(teks, arah) {
+  const chat = document.getElementById('wa-chat');
+  const d = document.createElement('div');
+  d.className = 'gelembung ' + arah;
+  d.innerHTML = teks
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/\*(.+?)\*/g, '<strong>$1</strong>')
+    .replace(/\n/g, '<br>');
+  chat.appendChild(d);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+function isiChip(b) {
+  document.getElementById('wa-teks').value = b.textContent;
+  document.getElementById('wa-teks').focus();
+}
+
+async function kirimWA(e) {
+  e.preventDefault();
+  const inp = document.getElementById('wa-teks');
+  const teks = inp.value.trim();
+  if (!teks) return;
+  const nomor = document.getElementById('wa-nomor').value;
+  const ref = 'WA-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+
+  bubble(teks, 'keluar');
+  inp.value = '';
+
+  const tunggu = document.createElement('div');
+  tunggu.className = 'gelembung masuk mengetik';
+  tunggu.textContent = 'mengetik…';
+  document.getElementById('wa-chat').appendChild(tunggu);
+
+  try {
+    const { body } = await kirim('/intake/whatsapp', { pengirim: nomor, teks, ref_luar: ref });
+    tunggu.remove();
+    if (!body.ok) { bubble('⚠️ ' + body.pesan, 'masuk'); catatLog('whatsapp', ref, 'gagal'); return; }
+    bubble(body.balasan, 'masuk');
+    catatLog('whatsapp', ref, body.pesanan_id ? 'diproses' : 'draft', body.pesanan_id ? '→ pesanan dibuat' : '');
+  } catch (err) {
+    tunggu.remove();
+    bubble('⚠️ Gagal menghubungi server: ' + err.message, 'masuk');
+  }
+}
+
+// ---------------- GrabFood ----------------
+function barisGrab() {
+  return [...document.querySelectorAll('#app-grab .qty-input')];
+}
+function ubahGrab(id, d) {
+  const el = document.getElementById('g' + id);
+  el.value = Math.max(0, (parseInt(el.value) || 0) + d);
+  hitungGrab();
+}
+function hitungGrab() {
+  let total = 0, qty = 0;
+  barisGrab().forEach(el => {
+    const q = Math.max(0, parseInt(el.value) || 0);
+    qty += q; total += q * parseFloat(el.dataset.harga);
+  });
+  document.getElementById('grab-info').innerText = qty + ' item';
+  document.getElementById('grab-total').innerText = rp(total);
+  return { qty, total };
+}
+
+async function kirimGrab(ulangi) {
+  const hasil = document.getElementById('grab-hasil');
+  const items = barisGrab()
+    .map(el => ({ kode: el.dataset.kode, qty: parseInt(el.value) || 0 }))
+    .filter(i => i.qty > 0);
+
+  let payload;
+  if (ulangi) {
+    if (!orderTerakhir) { alert('Belum ada order yang bisa dikirim ulang.'); return; }
+    payload = orderTerakhir;                    // sengaja: order_id sama persis
+  } else {
+    if (!items.length) { alert('Keranjang masih kosong.'); return; }
+    payload = {
+      order_id: 'GF-' + Math.floor(1000 + Math.random() * 9000),
+      driver: document.getElementById('grab-driver').value.trim(),
+      catatan: document.getElementById('grab-catatan').value.trim() || null,
+      items,
+    };
+  }
+
+  const { body } = await kirim('/intake/grab', payload);
+  if (!body.ok) {
+    hasil.innerHTML = `<div class="pesan pesan-galat">⚠️ ${body.pesan}</div>`;
+    catatLog('grab', payload.order_id, 'gagal');
+    return;
+  }
+
+  orderTerakhir = payload;
+  if (body.duplikat) {
+    hasil.innerHTML = `<div class="pesan pesan-ok">🔁 ${body.pesan}<br>
+      <small>Kiriman ulang tidak membuat pesanan kedua — inilah gunanya kunci idempotensi.</small></div>`;
+    catatLog('grab', payload.order_id, 'duplikat', 'diabaikan');
+  } else {
+    hasil.innerHTML = `<div class="pesan pesan-ok">✅ ${body.pesan}</div>`;
+    catatLog('grab', payload.order_id, 'diproses', body.no_pesanan);
+    barisGrab().forEach(el => el.value = 0);
+    hitungGrab();
+  }
+}
+
+hitungGrab();
+</script>
+</body>
+</html>

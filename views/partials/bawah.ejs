@@ -1,10 +1,52 @@
 </main>
+
+<div class="toast-wadah" id="toast-wadah"></div>
+
 <script>
   // Hilangkan pesan flash dari URL supaya tidak muncul lagi saat refresh
   if (location.search.includes('ok=') || location.search.includes('err=')) {
     history.replaceState(null, '', location.pathname + (location.search
       .replace(/[?&](ok|err)=[^&]*/g, '').replace(/^&/, '?') || ''));
   }
+</script>
+
+<script>
+// Pemberitahuan pesanan masuk dari kanal luar (WhatsApp / GrabFood) lewat SSE.
+(function () {
+  if (!window.EventSource) return;
+
+  const rp = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  const wadah = document.getElementById('toast-wadah');
+  const jalur = location.pathname;
+
+  // Kasir TIDAK dimuat ulang otomatis — keranjang yang sedang diisi bisa hilang.
+  const bolehMuatUlang = jalur === '/' || jalur.startsWith('/pesanan');
+
+  function toast(d) {
+    const el = document.createElement('div');
+    el.className = 'toast' + (d.kanal === 'grab' ? ' grab' : '');
+    const lencana = d.sumber === 'whatsapp' ? '💬 WhatsApp' : '🛵 GrabFood';
+    el.innerHTML = `
+      <div class="judul"><span>${lencana} — pesanan masuk</span>
+        <button type="button" class="tutup" aria-label="Tutup">×</button></div>
+      <div class="isi"><strong>${d.no_pesanan}</strong> · ${d.pelanggan || d.ref_luar || ''}<br>
+        ${d.isi || ''}<br>Total ${rp(d.total)}</div>
+      ${bolehMuatUlang ? '' :
+        '<div class="aksi"><button type="button" class="btn btn-kecil btn-primer muat">Muat ulang daftar</button></div>'}`;
+    el.querySelector('.tutup').onclick = () => el.remove();
+    const tombol = el.querySelector('.muat');
+    if (tombol) tombol.onclick = () => location.reload();
+    wadah.appendChild(el);
+    setTimeout(() => el.remove(), 12000);
+  }
+
+  const es = new EventSource('/events');
+  es.addEventListener('pesanan-baru', (ev) => {
+    let d; try { d = JSON.parse(ev.data); } catch { return; }
+    toast(d);
+    if (bolehMuatUlang) setTimeout(() => location.reload(), 1200);
+  });
+})();
 </script>
 </body>
 </html>
