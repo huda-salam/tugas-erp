@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Mobile - Input Proses Produksi</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f5f7;
+            color: #172b4d;
+            padding: 12px;
+        }
+
+        .main-wrapper {
+            max-width: 700px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            border-bottom: 2px solid #ebecf0;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .card-header h2 {
+            font-size: 18px;
+            color: #0052cc;
+        }
+
+        .form-section-title {
+            font-size: 14px;
+            font-weight: bold;
+            color: #5e6c84;
+            margin: 10px 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #42526e;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            border: 1px solid #dfe1e6;
+            border-radius: 6px;
+            background-color: #fafbfc;
+            color: #172b4d;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: #0052cc;
+            background-color: white;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .io-box {
+            background-color: #fafbfc;
+            border: 1px dashed #b3bac5;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+        }
+
+        /* Tombol Tambah Kerja */
+        .btn-add {
+            width: 100%;
+            background-color: #0052cc;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-add:active { background-color: #0065ff; }
+
+        /* Styling Tabel Rincian Produksi */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 550px;
+        }
+
+        th {
+            background-color: #f4f5f7;
+            color: #5e6c84;
+            font-weight: 600;
+            padding: 10px;
+            border-bottom: 2px solid #dfe1e6;
+            text-align: left;
+        }
+
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid #ebecf0;
+            vertical-align: top;
+        }
+
+        .badge-io {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .bg-input { background-color: #deebff; color: #0747a6; }
+        .bg-output { background-color: #e3fcef; color: #006644; }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: #ff5630;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn-submit-erp {
+            width: 100%;
+            background-color: #00875a;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Pencatatan Aktivitas Produksi</h2>
+            </div>
+            
+            <div class="form-group">
+                <label for="batch_no">Nomor Batch / Kode Produksi</label>
+                <input type="text" id="batch_no" class="form-control" value="PRD-20260531-01" placeholder="Contoh: PRD-001">
+            </div>
+
+            <div class="form-section-title" style="color: #0747a6;">⬇️ Unsur Bahan Baku (Input)</div>
+            <div class="io-box" style="border-color: #deebff;">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="bahan_nama">Nama Bahan</label>
+                        <select id="bahan_nama" class="form-control">
+                            <option value="Beras Merah Organik">Beras Merah Organik</option>
+                            <option value="Pisang Ambon Premium">Pisang Ambon Premium</option>
+                            <option value="Wortel Organik Segar">Wortel Organik Segar</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="bahan_qty">Jumlah Pakai</label>
+                        <input type="text" id="bahan_qty" class="form-control" placeholder="Misal: 3 Kg atau 2 Sisir">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section-title" style="color: #006644;">⬆️ Hasil Jadi Produk (Output)</div>
+            <div class="io-box" style="border-color: #e3fcef;">
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="produk_nama">Nama Produk Jadi</label>
+                        <select id="produk_nama" class="form-control">
+                            <option value="Bubur Bayi Beras Merah">Bubur Bayi Beras Merah</option>
+                            <option value="Bubur Bayi Pisang Susu">Bubur Bayi Pisang Susu</option>
+                            <option value="Puree Wortel Organik">Puree Wortel Organik</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="produk_qty">Jumlah Hasil</label>
+                        <input type="number" id="produk_qty" class="form-control" placeholder="Porsi">
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn-add" onclick="tambahKeLog()">+ Tambahkan ke Daftar Log</button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Daftar Log Aktivitas Produksi Hari Ini</h2>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 100px;">Batch ID</th>
+                            <th>Rincian Bahan Baku (Input)</th>
+                            <th>Rincian Produk Jadi (Output)</th>
+                            <th class="text-center" style="width: 50px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabel-produksi">
+                        <tr id="row-kosong">
+                            <td colspan="4" class="text-center" style="color: #a5adba; padding: 20px;">Belum ada riwayat proses produksi yang diinput.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <button class="btn-submit-erp" onclick="simpanKeERP()">KIRIM DATA KE GUDANG & JURNAL</button>
+        </div>
+
+    </div>
+
+    <script>
+        let logProduksi = [];
+
+        function tambahKeLog() {
+            const batchNo = document.getElementById('batch_no').value.trim();
+            const bahanNama = document.getElementById('bahan_nama').value;
+            const bahanQty = document.getElementById('bahan_qty').value.trim();
+            const produkNama = document.getElementById('produk_nama').value;
+            const produkQty = document.getElementById('produk_qty').value.trim();
+
+            // Validasi kelengkapan data kuantitas
+            if (batchNo === "" || bahanQty === "" || produkQty === "" || produkQty <= 0) {
+                alert("Mohon lengkapi nomor batch, kuantitas bahan terpakai, dan target porsi output hasil jadi!");
+                return;
+            }
+
+            // Simpan data gabungan input-output ke objek array
+            const dataLog = {
+                batch: batchNo,
+                bahan: `${bahanNama} (${bahanQty})`,
+                produk: `${produkNama} (${produkQty} Porsi)`
+            };
+
+            logProduksi.push(dataLog);
+            updateTabel();
+
+            // Kosongkan kolom jumlah ketikan agar siap untuk batch selanjutnya
+            document.getElementById('bahan_qty').value = "";
+            document.getElementById('produk_qty').value = "";
+            
+            // Auto generate kode batch fiktif baru agar user tidak perlu mengetik ulang
+            generateNextBatch();
+        }
+
+        function hapusLog(index) {
+            logProduksi.splice(index, 1);
+            updateTabel();
+        }
+
+        function updateTabel() {
+            const tbody = document.getElementById('tabel-produksi');
+            tbody.innerHTML = "";
+
+            if (logProduksi.length === 0) {
+                tbody.innerHTML = `<tr id="row-kosong"><td colspan="4" class="text-center" style="color: #a5adba; padding: 20px;">Belum ada riwayat proses produksi yang diinput.</td></tr>`;
+                return;
+            }
+
+            logProduksi.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><code>${item.batch}</code></td>
+                    <td><span class="badge-io bg-dash bg-input">Bahan</span> <br>${item.bahan}</td>
+                    <td><span class="badge-io bg-dash bg-output">Produk jadi</span> <br><strong>${item.produk}</strong></td>
+                    <td class="text-center">
+                        <button class="btn-delete" onclick="hapusLog(${index})">❌</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function generateNextBatch() {
+            const currentBatch = document.getElementById('batch_no').value;
+            // Potong string untuk menaikkan index belakang otomatis (PRD-xxx-01 -> PRD-xxx-02)
+            const parts = currentBatch.split('-');
+            if (parts.length === 3) {
+                let indexNext = parseInt(parts[2]) + 1;
+                // Pad nomor agar tetap dua digit (02, 03, dst)
+                let paddedIndex = indexNext.toString().padStart(2, '0');
+                document.getElementById('batch_no').value = `${parts[0]}-${parts[1]}-${paddedIndex}`;
+            }
+        }
+
+        function simpanKeERP() {
+            if (logProduksi.length === 0) {
+                alert("Gagal menyimpan! Daftar log kerja produksi masih kosong.");
+                return;
+            }
+            alert(`Sistem ERP Berhasil Memproses data!\n\nStok Bahan Baku otomatis terpotong di gudang.\nStok Produk Jadi otomatis bertambah di app kasir sebanyak ${logProduksi.length} urutan batch kerja.`);
+            
+            // Reset form
+            logProduksi = [];
+            updateTabel();
+        }
+    </script>
+</body>
+</html>

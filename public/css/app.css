@@ -1,0 +1,251 @@
+/* Design token diekstrak dari desain UX asli (palette Atlassian) */
+:root{
+  --biru:#0052cc; --biru-terang:#0065ff; --biru-muda:#deebff; --biru-tua:#0747a6;
+  --hijau:#36b37e; --hijau-tua:#00875a; --hijau-muda:#e3fcef; --hijau-teks:#006644;
+  --merah:#ff5630; --merah-tua:#bf2600; --merah-muda:#ffebe6;
+  --kuning:#ffab00; --kuning-muda:#fffae6; --ungu:#5243aa; --ungu-muda:#eae6ff;
+  --teks:#172b4d; --teks-lembut:#5e6c84; --teks-samar:#a5adba;
+  --garis:#dfe1e6; --garis-tipis:#e3e6ec; --latar:#f5f7fa; --abu:#f4f5f7;
+  --radius:8px; --radius-lg:12px; --bayang:0 1px 3px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:var(--latar); color:var(--teks); font-size:14px; line-height:1.45;
+  padding-bottom:76px;
+}
+
+/* ---------- Shell ---------- */
+.topbar{
+  background:var(--biru); color:#fff; padding:14px 16px; position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.topbar h1{font-size:17px; font-weight:700}
+.topbar .sub{font-size:11px; opacity:.8; font-weight:400}
+.topbar .kas{font-size:11px; text-align:right; opacity:.95}
+.topbar .kas b{display:block; font-size:15px}
+
+.wrap{max-width:1080px; margin:0 auto; padding:12px}
+
+/* Navigasi bawah (HP) — berubah jadi sidebar di layar lebar */
+.nav{
+  position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--garis-tipis);
+  display:flex; overflow-x:auto; z-index:60; box-shadow:0 -2px 10px rgba(0,0,0,.06);
+}
+.nav a{
+  flex:1 0 auto; min-width:64px; padding:8px 6px 7px; text-align:center; text-decoration:none;
+  color:var(--teks-lembut); font-size:10px; font-weight:600; border-top:3px solid transparent;
+}
+.nav a i{display:block; font-style:normal; font-size:19px; margin-bottom:2px}
+.nav a.on{color:var(--biru); border-top-color:var(--biru); background:var(--biru-muda)}
+
+/* ---------- Kartu ---------- */
+.card{background:#fff; border-radius:var(--radius-lg); box-shadow:var(--bayang); padding:16px; margin-bottom:12px}
+.card-head{display:flex; justify-content:space-between; align-items:center; gap:8px;
+  border-bottom:1px solid var(--garis); padding-bottom:10px; margin-bottom:14px}
+.card-head h2{font-size:15px; font-weight:700}
+.card-head p{font-size:12px; color:var(--teks-lembut); font-weight:400}
+
+.judul-seksi{font-size:13px; font-weight:700; color:var(--biru); margin:16px 0 8px;
+  border-left:3px solid var(--biru); padding-left:8px}
+
+/* ---------- Form ---------- */
+.grup{margin-bottom:12px; flex:1}
+label{display:block; font-size:12px; font-weight:600; color:var(--teks-lembut); margin-bottom:5px}
+.kontrol{
+  width:100%; padding:10px 12px; border:1px solid var(--garis); border-radius:6px;
+  font-size:14px; background:#fff; color:var(--teks); font-family:inherit;
+}
+.kontrol:focus{outline:none; border-color:var(--biru); box-shadow:0 0 0 2px var(--biru-muda)}
+.kontrol[readonly]{background:var(--abu); color:var(--teks-lembut)}
+.baris{display:flex; gap:10px; flex-wrap:wrap}
+.baris > .grup{min-width:120px}
+.petunjuk{font-size:11px; color:var(--teks-lembut); margin-top:4px}
+
+/* ---------- Tombol ---------- */
+.btn{padding:10px 16px; font-size:14px; font-weight:600; border-radius:6px; border:none;
+  cursor:pointer; text-decoration:none; display:inline-block; text-align:center; font-family:inherit}
+.btn:active{transform:translateY(1px)}
+.btn-primer{background:var(--biru); color:#fff}
+.btn-sukses{background:var(--hijau); color:#fff}
+.btn-hijau-tua{background:var(--hijau-tua); color:#fff}
+.btn-abu{background:var(--garis); color:#42526e}
+.btn-bahaya{background:var(--merah); color:#fff}
+.btn-blok{display:block; width:100%}
+.btn-kecil{padding:6px 10px; font-size:12px}
+.btn-hapus{background:none; border:none; color:var(--merah); font-weight:700; cursor:pointer; font-size:15px}
+.btn:disabled{background:var(--garis); color:var(--teks-samar); cursor:not-allowed}
+
+/* ---------- Tabel ---------- */
+.tabel-scroll{overflow-x:auto; -webkit-overflow-scrolling:touch}
+table{width:100%; border-collapse:collapse; font-size:13px}
+th{background:var(--abu); color:var(--teks-lembut); font-size:11px; text-transform:uppercase;
+  letter-spacing:.4px; padding:9px 10px; text-align:left; border-bottom:1px solid var(--garis); white-space:nowrap}
+td{padding:9px 10px; border-bottom:1px solid var(--garis-tipis); vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+.ka{text-align:right} .tg{text-align:center}
+.baris-total{font-weight:700; background:var(--abu)}
+.baris-total td{border-top:2px solid var(--garis); color:var(--biru)}
+.kosong{text-align:center; color:var(--teks-samar); padding:24px 10px}
+
+/* ---------- Badge & angka ---------- */
+.badge{display:inline-block; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:700}
+.b-biru{background:var(--biru-muda); color:var(--biru-tua)}
+.b-hijau{background:var(--hijau-muda); color:var(--hijau-teks)}
+.b-merah{background:var(--merah-muda); color:var(--merah-tua)}
+.b-kuning{background:var(--kuning-muda); color:#974f0c}
+.b-ungu{background:var(--ungu-muda); color:var(--ungu)}
+.b-abu{background:var(--abu); color:var(--teks-lembut)}
+.t-hijau{color:var(--hijau-teks); font-weight:600}
+.t-merah{color:var(--merah); font-weight:600}
+.t-biru{color:var(--biru); font-weight:600}
+.t-lembut{color:var(--teks-lembut)}
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px}
+
+/* ---------- Grid ringkasan ---------- */
+.ringkas{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:12px}
+.kotak{background:#fff; border-radius:var(--radius); padding:14px; box-shadow:var(--bayang); border-left:4px solid var(--biru)}
+.kotak.hijau{border-left-color:var(--hijau)} .kotak.merah{border-left-color:var(--merah)}
+.kotak.kuning{border-left-color:var(--kuning)} .kotak.ungu{border-left-color:var(--ungu)}
+.kotak .label{font-size:11px; color:var(--teks-lembut); font-weight:600; text-transform:uppercase; letter-spacing:.3px}
+.kotak .nilai{font-size:19px; font-weight:800; margin-top:4px}
+.kotak .ket{font-size:11px; color:var(--teks-samar); margin-top:2px}
+
+/* ---------- Tab ---------- */
+.tab{display:flex; gap:6px; background:#fff; padding:6px; border-radius:var(--radius);
+  margin-bottom:12px; box-shadow:var(--bayang); overflow-x:auto}
+.tab a,.tab button{flex:1; white-space:nowrap; padding:10px 12px; border:none; background:transparent;
+  border-radius:6px; font-size:13px; font-weight:700; color:var(--teks-lembut); cursor:pointer;
+  text-decoration:none; text-align:center; font-family:inherit}
+.tab a.on,.tab button.on{background:var(--biru); color:#fff}
+
+/* ---------- Baris produk / stepper (dari desain kasir) ---------- */
+.item{display:flex; justify-content:space-between; align-items:center; gap:10px;
+  padding:12px 0; border-bottom:1px solid var(--garis-tipis)}
+.item:last-child{border-bottom:none}
+.item-nama{font-size:14px; font-weight:600}
+.item-meta{font-size:12px; color:var(--teks-lembut); margin-top:2px; display:flex; gap:10px; flex-wrap:wrap}
+.item-harga{color:var(--biru); font-weight:700}
+.stok-aman{color:var(--hijau-teks)} .stok-tipis{color:var(--kuning)} .stok-habis{color:var(--merah)}
+.stepper{display:flex; align-items:center; background:var(--abu); border-radius:8px; padding:4px; gap:2px}
+.stepper button{width:38px; height:38px; border:none; background:var(--biru); color:#fff;
+  font-size:20px; font-weight:700; border-radius:6px; cursor:pointer; line-height:1}
+.stepper button:disabled{background:var(--garis); color:var(--teks-samar)}
+.qty{width:48px; text-align:center; border:none; background:transparent; font-size:15px;
+  font-weight:700; color:var(--teks); font-family:inherit; -moz-appearance:textfield}
+.qty::-webkit-outer-spin-button,.qty::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+
+/* Kartu pilih (pesanan PO / antrean Grab) */
+.pilih{border:2px solid var(--garis); border-radius:var(--radius); padding:12px; margin-bottom:8px; cursor:pointer}
+.pilih:hover{border-color:var(--teks-samar)}
+.pilih.aktif{border-color:var(--biru); background:var(--biru-muda)}
+.pilih .judul{display:flex; justify-content:space-between; font-weight:700; font-size:13px; gap:8px}
+.pilih .rangkum{font-size:12px; color:var(--teks-lembut); margin-top:4px}
+
+/* Metode bayar */
+.bayar{display:flex; gap:10px}
+.bayar label{flex:1; border:2px solid var(--garis); border-radius:var(--radius); padding:12px;
+  text-align:center; font-weight:700; font-size:13px; color:var(--teks-lembut); cursor:pointer; margin:0}
+.bayar label.on{border-color:var(--hijau); background:var(--hijau-muda); color:var(--hijau-teks)}
+.bayar input{display:none}
+
+/* ---------- Bar bawah (total + proses) ---------- */
+.bar-bawah{position:fixed; bottom:54px; left:0; right:0; background:#fff; padding:10px 16px;
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+  border-top:1px solid var(--garis-tipis); box-shadow:0 -4px 10px rgba(0,0,0,.07); z-index:55}
+.bar-bawah .label{font-size:11px; color:var(--teks-lembut); font-weight:600}
+.bar-bawah .total{font-size:20px; font-weight:800; color:var(--merah-tua)}
+body.ada-bar{padding-bottom:140px}
+
+/* ---------- Pesan ---------- */
+.pesan{padding:11px 14px; border-radius:var(--radius); font-size:13px; font-weight:600; margin-bottom:12px}
+.pesan-ok{background:var(--hijau-muda); color:var(--hijau-teks); border-left:4px solid var(--hijau)}
+.pesan-galat{background:var(--merah-muda); color:var(--merah-tua); border-left:4px solid var(--merah)}
+
+/* ---------- Layar lebar ---------- */
+@media (min-width:860px){
+  body{padding-bottom:20px; padding-left:190px}
+  body.ada-bar{padding-bottom:80px}
+  .nav{top:0; bottom:0; right:auto; width:190px; flex-direction:column; overflow-y:auto;
+    border-top:none; border-right:1px solid var(--garis-tipis); padding-top:8px; box-shadow:none}
+  .nav a{flex:0 0 auto; text-align:left; padding:11px 16px; font-size:13px;
+    border-top:none; border-left:3px solid transparent; display:flex; align-items:center; gap:10px}
+  .nav a i{display:inline; font-size:16px; margin:0}
+  .nav a.on{border-left-color:var(--biru); border-top-color:transparent}
+  .topbar{padding-left:206px; margin-left:-190px}
+  .wrap{padding:16px}
+  .bar-bawah{bottom:0; left:190px}
+  .kotak .nilai{font-size:22px}
+}
+
+/* ---------- Cetak ---------- */
+@media print{
+  body{background:#fff; padding:0}
+  .nav,.topbar,.bar-bawah,.no-print{display:none !important}
+  .card{box-shadow:none; padding:0; margin-bottom:16px}
+  .wrap{max-width:100%; padding:0}
+}
+
+/* =========================================================
+   Komponen kasir — diport dari desain gemini-code penjualan
+   ========================================================= */
+
+/* Tab pil ala desain: latar abu, tab aktif putih terangkat */
+.tabs-container{display:flex; background:var(--garis); padding:4px; border-radius:8px; gap:4px; margin-bottom:12px}
+.tab-btn{flex:1; padding:12px 6px; font-size:13px; font-weight:700; border:none; background:transparent;
+  color:#42526e; border-radius:6px; cursor:pointer; text-align:center; font-family:inherit}
+.tab-btn.active{background:#fff; color:var(--biru); box-shadow:0 2px 4px rgba(0,0,0,.1)}
+
+.badge-tipe{padding:4px 8px; border-radius:4px; font-size:11px; font-weight:700; text-transform:uppercase}
+.bg-retail{background:var(--hijau-muda); color:var(--hijau-teks)}
+.bg-pesanan{background:var(--biru-muda); color:var(--biru-tua)}
+.bg-grab{background:#eae6ff; color:#403294}
+
+/* Daftar produk retail */
+.product-list{display:flex; flex-direction:column; gap:10px}
+.product-item{display:flex; justify-content:space-between; align-items:center; gap:10px;
+  padding:12px; background:#fafbfc; border:1px solid var(--garis); border-radius:8px}
+.product-info{display:flex; flex-direction:column; gap:3px}
+.product-name{font-size:14px; font-weight:700; color:var(--teks)}
+.product-meta{display:flex; gap:12px; font-size:12px; flex-wrap:wrap}
+.product-price{color:var(--biru); font-weight:600}
+.product-stock{color:#ff9900; font-weight:700}
+.stock-ok{color:var(--hijau-teks)}
+.stock-out{color:var(--merah)}
+
+.counter-container{display:flex; align-items:center; border:1px solid var(--garis);
+  border-radius:6px; overflow:hidden; background:#fff; width:120px; height:36px; flex:none}
+.btn-counter{width:35px; height:100%; background:var(--abu); border:none; font-size:16px;
+  font-weight:700; color:#42526e; cursor:pointer; font-family:inherit}
+.btn-counter:disabled{color:var(--teks-samar); cursor:not-allowed}
+.qty-input{flex:1; width:100%; height:100%; border:none; text-align:center; font-size:14px;
+  font-weight:700; outline:none; font-family:inherit; color:var(--teks); -moz-appearance:textfield}
+.qty-input::-webkit-outer-spin-button,.qty-input::-webkit-inner-spin-button{-webkit-appearance:none; margin:0}
+.qty-input:disabled{background:#fff; color:var(--teks-samar)}
+
+/* Antrean pesanan / Grab */
+.order-list-container{display:flex; flex-direction:column; gap:8px}
+.order-select-card{padding:12px; border:1px solid var(--garis); border-radius:8px;
+  background:#fafbfc; cursor:pointer; transition:all .2s}
+.order-select-card:hover{border-color:var(--teks-samar)}
+.order-select-card.selected-pesanan{border:2px solid var(--biru-tua); background:var(--biru-muda)}
+.order-select-card.selected-grab{border:2px solid #403294; background:#eae6ff}
+.customer-title-row{display:flex; justify-content:space-between; gap:8px;
+  font-weight:700; font-size:14px; color:var(--teks)}
+.order-select-card.selected-pesanan .customer-title-row{color:var(--biru-tua)}
+.order-select-card.selected-grab .customer-title-row{color:#403294}
+.meta-summary{font-size:12px; color:var(--teks-lembut); margin-top:4px}
+
+/* Metode pembayaran */
+.payment-options{display:flex; gap:12px; margin-top:6px}
+.pay-label{flex:1; display:flex; align-items:center; justify-content:center; gap:8px; padding:12px;
+  border:2px solid var(--garis); border-radius:6px; cursor:pointer; font-weight:700;
+  font-size:14px; background:#fafbfc; color:var(--teks-lembut); margin:0}
+.pay-label input{display:none}
+.pay-label.selected-cash{border-color:var(--biru); background:var(--biru-muda); color:var(--biru-tua)}
+.pay-label.selected-qris{border-color:var(--hijau); background:var(--hijau-muda); color:var(--hijau-teks)}
+
+.cash-calculator-box{background:var(--abu); padding:12px; border-radius:6px;
+  margin-top:12px; border:1px solid var(--garis)}
+.txt-kembalian{font-weight:700; font-size:15px; color:var(--hijau-teks);
+  background:var(--hijau-muda); border-color:#abf5d1}

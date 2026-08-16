@@ -1,0 +1,128 @@
+<%- include('partials/atas') %>
+
+<form method="post" action="/pembelian" id="form-beli">
+<div class="card">
+  <div class="card-head"><h2>Input Pembelian Bahan</h2>
+    <p>Nomor nota dibuat otomatis</p></div>
+
+  <div class="baris">
+    <div class="grup">
+      <label for="tanggal">Tanggal</label>
+      <input type="date" id="tanggal" name="tanggal" class="kontrol" value="<%= hariIni %>" required>
+    </div>
+    <div class="grup">
+      <label for="supplier_id">Vendor / Supplier</label>
+      <select id="supplier_id" name="supplier_id" class="kontrol">
+        <option value="">— tanpa supplier —</option>
+        <% supplier.forEach(s => { %><option value="<%= s.id %>"><%= s.nama %></option><% }) %>
+      </select>
+    </div>
+    <div class="grup">
+      <label for="cara_bayar">Cara Bayar</label>
+      <select id="cara_bayar" name="cara_bayar" class="kontrol">
+        <option value="tunai">Tunai (kas keluar)</option>
+        <option value="utang">Utang (bayar nanti)</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="judul-seksi">Rincian Item Belanja</div>
+  <div class="tabel-scroll">
+    <table>
+      <thead><tr>
+        <th style="min-width:170px">Bahan</th>
+        <th class="ka" style="width:110px">Harga Satuan</th>
+        <th class="tg" style="width:100px">Qty</th>
+        <th class="ka" style="width:110px">Subtotal</th>
+        <th style="width:44px"></th>
+      </tr></thead>
+      <tbody id="baris-beli"></tbody>
+      <tfoot><tr class="baris-total">
+        <td colspan="3" class="ka">GRAND TOTAL</td>
+        <td class="ka" id="grand-total">Rp 0</td><td></td>
+      </tr></tfoot>
+    </table>
+  </div>
+
+  <div class="baris" style="margin-top:12px">
+    <button type="button" class="btn btn-abu" onclick="tambahBaris()">+ Tambah Item</button>
+    <div class="grup" style="min-width:200px">
+      <input type="text" name="catatan" class="kontrol" placeholder="Catatan (opsional)">
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-sukses btn-blok" style="margin-top:12px">SIMPAN PEMBELIAN</button>
+  <p class="petunjuk">Pembelian menambah persediaan bahan dan memperbarui harga rata-rata.
+     Belum menjadi HPP — HPP diakui saat bahan dipakai produksi.</p>
+</div>
+</form>
+
+<div class="card">
+  <div class="card-head"><h2>Riwayat Pembelian</h2></div>
+  <% if (!daftar.length) { %><p class="kosong">Belum ada pembelian.</p><% } else { %>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th>No. Nota</th><th>Tanggal</th><th>Supplier</th><th>Item</th><th>Bayar</th><th class="ka">Total</th></tr></thead>
+    <tbody><% daftar.forEach(p => { %>
+      <tr>
+        <td class="mono"><%= p.no_nota %></td>
+        <td class="t-lembut"><%= p.tanggal %></td>
+        <td><%= p.supplier %></td>
+        <td class="t-lembut" style="max-width:260px"><%= p.isi || '-' %></td>
+        <td><span class="badge <%= p.cara_bayar==='utang'?'b-kuning':'b-hijau' %>"><%= p.cara_bayar %></span></td>
+        <td class="ka"><strong><%= rupiah(p.total) %></strong></td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+</div>
+
+<script>
+const BAHAN = <%- JSON.stringify(bahan.map(b => ({id:b.id, nama:b.nama, satuan:b.satuan, avg:Math.round(b.harga_avg)}))) %>;
+const rp = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+let n = 0;
+
+function tambahBaris(){
+  if (!BAHAN.length) { alert('Belum ada master bahan. Tambahkan dulu di menu Master Data.'); return; }
+  const i = n++;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>
+      <select name="items[${i}][bahan_id]" class="kontrol" onchange="isiHarga(${i})" id="b${i}">
+        ${BAHAN.map(b => `<option value="${b.id}" data-avg="${b.avg}" data-sat="${b.satuan}">${b.nama}</option>`).join('')}
+      </select>
+    </td>
+    <td><input type="number" name="items[${i}][harga_satuan]" id="h${i}" class="kontrol ka"
+               min="0" step="100" value="0" oninput="hitung()"></td>
+    <td><input type="number" name="items[${i}][qty]" id="q${i}" class="kontrol tg"
+               min="0" step="0.01" value="1" oninput="hitung()">
+        <div class="petunjuk tg" id="s${i}"></div></td>
+    <td class="ka" id="sub${i}">Rp 0</td>
+    <td class="tg"><button type="button" class="btn-hapus" onclick="this.closest('tr').remove();hitung()">✕</button></td>`;
+  document.getElementById('baris-beli').appendChild(tr);
+  isiHarga(i);
+}
+function isiHarga(i){
+  const opt = document.getElementById('b'+i).selectedOptions[0];
+  const h = document.getElementById('h'+i);
+  if (!parseFloat(h.value)) h.value = opt.dataset.avg || 0;   // usulan dari harga rata-rata terakhir
+  document.getElementById('s'+i).innerText = opt.dataset.sat;
+  hitung();
+}
+function hitung(){
+  let total = 0;
+  document.querySelectorAll('#baris-beli tr').forEach(tr => {
+    const i = tr.querySelector('select').name.match(/\d+/)[0];
+    const sub = (parseFloat(document.getElementById('q'+i).value)||0) *
+                (parseFloat(document.getElementById('h'+i).value)||0);
+    document.getElementById('sub'+i).innerText = rp(sub);
+    total += sub;
+  });
+  document.getElementById('grand-total').innerText = rp(total);
+}
+document.getElementById('form-beli').addEventListener('submit', e => {
+  if (!document.querySelectorAll('#baris-beli tr').length) { e.preventDefault(); alert('Tambahkan minimal satu item.'); }
+});
+tambahBaris();
+</script>
+
+<%- include('partials/bawah') %>

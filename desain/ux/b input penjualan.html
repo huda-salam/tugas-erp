@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Mobile - Sisa Stok & Hitung Otomatis</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            padding-bottom: 100px;
+        }
+
+        .header {
+            background-color: #0052cc;
+            color: white;
+            padding: 16px;
+            font-size: 18px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .container {
+            padding: 12px;
+        }
+
+        .product-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .product-info {
+            flex-grow: 1;
+        }
+
+        .product-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #172b4d;
+            margin-bottom: 2px;
+        }
+
+        .product-price {
+            font-size: 14px;
+            color: #5e6c84;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .stock-status {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .stok-aman { color: #36b37e; }
+        .stok-tipis { color: #ffab00; }
+        .stok-habis { color: #ff5630; }
+
+        .stepper-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .stepper {
+            display: flex;
+            align-items: center;
+            background: #f4f5f7;
+            border-radius: 8px;
+            padding: 4px;
+        }
+
+        .btn-step {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background-color: #0052cc;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-step:active {
+            background-color: #0065ff;
+        }
+
+        .btn-step:disabled {
+            background-color: #dfe1e6;
+            color: #a5adba;
+            cursor: not-allowed;
+        }
+
+        .input-qty {
+            width: 45px;
+            text-align: center;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-weight: bold;
+            color: #172b4d;
+        }
+
+        .item-subtotal {
+            font-size: 12px;
+            color: #0052cc;
+            font-weight: bold;
+        }
+
+        /* Sticky Bottom Bar */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.07);
+            border-top: 1px solid #e3e6ec;
+        }
+
+        .total-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .total-count {
+            font-size: 12px;
+            color: #5e6c84;
+        }
+
+        .total-price {
+            font-size: 20px;
+            font-weight: 800;
+            color: #ff5630;
+        }
+
+        .btn-process {
+            background-color: #36b37e;
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">📋 Input Penjualan</div>
+
+    <div class="container">
+        <div class="product-card">
+            <div class="product-info">
+                <div class="product-name">Bubur Bayi Beras Merah</div>
+                <div class="product-price">Rp 5.000</div>
+                <div class="stock-status stok-aman">Sisa Stok: 42 porsi</div>
+            </div>
+            <div class="stepper-container">
+                <div class="stepper">
+                    <button class="btn-step" onclick="changeQty('qty1', -1, 'sub1')">-</button>
+                    <input type="number" id="qty1" class="input-qty" value="0" readonly>
+                    <button class="btn-step" onclick="changeQty('qty1', 1, 'sub1')">+</button>
+                </div>
+                <div class="item-subtotal" id="sub1">Rp 0</div>
+            </div>
+        </div>
+
+        <div class="product-card">
+            <div class="product-info">
+                <div class="product-name">Bubur Bayi Pisang Susu</div>
+                <div class="product-price">Rp 5.000</div>
+                <div class="stock-status stok-tipis">Sisa Stok: 5 porsi ⚠️</div>
+            </div>
+            <div class="stepper-container">
+                <div class="stepper">
+                    <button class="btn-step" onclick="changeQty('qty2', -1, 'sub2')">-</button>
+                    <input type="number" id="qty2" class="input-qty" value="0" readonly>
+                    <button class="btn-step" onclick="changeQty('qty2', 1, 'sub2')">+</button>
+                </div>
+                <div class="item-subtotal" id="sub2">Rp 0</div>
+            </div>
+        </div>
+
+        <div class="product-card">
+            <div class="product-info">
+                <div class="product-name">Puree Wortel Organik</div>
+                <div class="product-price">Rp 5.000</div>
+                <div class="stock-status stok-habis">Sisa Stok: 0 porsi ❌</div>
+            </div>
+            <div class="stepper-container">
+                <div class="stepper">
+                    <button class="btn-step" disabled>-</button>
+                    <input type="number" class="input-qty" value="0" disabled>
+                    <button class="btn-step" disabled>+</button>
+                </div>
+                <div class="item-subtotal">Rp 0</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <div class="total-section">
+            <span class="total-count" id="total-items">0 Item dipilih</span>
+            <span class="total-price" id="total-price">Rp 0</span>
+        </div>
+        <button class="btn-process" onclick="prosesBelanja()">PROSES</button>
+    </div>
+
+    <script>
+        const HARGA_RATA_RATA = 5000;
+
+        // Data master keranjang beserta limit sisa stoknya
+        let cart = {
+            qty1: { qty: 0, maxStock: 42 },
+            qty2: { qty: 0, maxStock: 5 },
+            qty3: { qty: 0, maxStock: 0 }
+        };
+
+        function changeQty(id, amount, subtotalId) {
+            let currentVal = cart[id].qty;
+            let maxStock = cart[id].maxStock;
+            let newVal = currentVal + amount;
+            
+            // Validasi: tidak boleh minus DAN tidak boleh melebihi sisa stok
+            if (newVal >= 0 && newVal <= maxStock) {
+                cart[id].qty = newVal;
+                document.getElementById(id).value = newVal;
+                
+                // Hitung subtotal item
+                let subtotal = newVal * HARGA_RATA_RATA;
+                document.getElementById(subtotalId).innerText = "Rp " + subtotal.toLocaleString('id-ID');
+                
+                // Hitung total keseluruhan
+                hitungTotal();
+            } else if (newVal > maxStock) {
+                alert("Input gagal! Jumlah melebihi sisa stok yang tersedia (" + maxStock + " porsi).");
+            }
+        }
+
+        function hitungTotal() {
+            let totalItem = 0;
+            
+            for (let key in cart) {
+                totalItem += cart[key].qty;
+            }
+            
+            let totalBayar = totalItem * HARGA_RATA_RATA;
+            
+            document.getElementById('total-items').innerText = totalItem + " Item dipilih";
+            document.getElementById('total-price').innerText = "Rp " + totalBayar.toLocaleString('id-ID');
+        }
+
+        function prosesBelanja() {
+            let totalBayar = document.getElementById('total-price').innerText;
+            if (totalBayar === "Rp 0") {
+                alert("Silakan pilih produk terlebih dahulu!");
+            } else {
+                alert("Pesanan berhasil diproses! Total Transaksi: " + totalBayar);
+            }
+        }
+    </script>
+</body>
+</html>

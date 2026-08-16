@@ -1,0 +1,165 @@
+<%- include('partials/atas') %>
+
+<form method="post" action="/produksi" id="form-produksi">
+<div class="card">
+  <div class="card-head"><h2>Pencatatan Aktivitas Produksi</h2>
+    <p>Nomor batch otomatis</p></div>
+
+  <div class="baris">
+    <div class="grup" style="max-width:200px">
+      <label for="tanggal">Tanggal Produksi</label>
+      <input type="date" id="tanggal" name="tanggal" class="kontrol" value="<%= hariIni %>" required>
+    </div>
+    <div class="grup">
+      <label for="catatan">Catatan</label>
+      <input type="text" id="catatan" name="catatan" class="kontrol" placeholder="Opsional">
+    </div>
+  </div>
+
+  <div class="judul-seksi" style="color:var(--hijau-teks);border-left-color:var(--hijau)">⬆️ Hasil Jadi Produk (Output)</div>
+  <div class="tabel-scroll">
+    <table>
+      <thead><tr><th style="min-width:180px">Produk</th><th class="tg" style="width:120px">Jumlah Hasil</th><th style="width:44px"></th></tr></thead>
+      <tbody id="baris-hasil"></tbody>
+    </table>
+  </div>
+  <div class="baris" style="margin-top:10px">
+    <button type="button" class="btn btn-abu btn-kecil" onclick="tambahHasil()">+ Produk</button>
+    <button type="button" class="btn btn-primer btn-kecil" onclick="isiDariResep()">🧮 Isi Bahan dari Resep</button>
+  </div>
+
+  <div class="judul-seksi">⬇️ Bahan Baku yang Dipakai (Input)</div>
+  <div class="tabel-scroll">
+    <table>
+      <thead><tr>
+        <th style="min-width:180px">Bahan</th>
+        <th class="tg" style="width:130px">Jumlah Pakai</th>
+        <th class="ka" style="width:120px">Stok Tersedia</th>
+        <th style="width:44px"></th>
+      </tr></thead>
+      <tbody id="baris-bahan"></tbody>
+    </table>
+  </div>
+  <button type="button" class="btn btn-abu btn-kecil" style="margin-top:10px" onclick="tambahBahan()">+ Bahan</button>
+
+  <div id="peringatan"></div>
+
+  <button type="submit" class="btn btn-hijau-tua btn-blok" style="margin-top:14px">SIMPAN PRODUKSI</button>
+  <p class="petunjuk">Stok bahan berkurang, stok produk bertambah. Bahan dinilai dengan harga rata-rata,
+     dan HPP per porsi dihitung dari total nilai bahan dibagi jumlah output batch ini.</p>
+</div>
+</form>
+
+<div class="card">
+  <div class="card-head"><h2>Riwayat Batch Produksi</h2></div>
+  <% if (!daftar.length) { %><p class="kosong">Belum ada produksi.</p><% } else { %>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th>Batch</th><th>Tanggal</th><th>Bahan Dipakai</th><th>Hasil</th><th class="ka">Nilai Bahan</th><th class="ka">HPP/unit</th></tr></thead>
+    <tbody><% daftar.forEach(p => { %>
+      <tr>
+        <td class="mono"><%= p.no_batch %></td>
+        <td class="t-lembut"><%= p.tanggal %></td>
+        <td class="t-lembut" style="max-width:220px"><%= p.bahan || '-' %></td>
+        <td><strong><%= p.hasil || '-' %></strong></td>
+        <td class="ka"><%= rupiah(p.total_nilai_bahan) %></td>
+        <td class="ka t-biru"><%= p.output > 0 ? rupiah(p.total_nilai_bahan / p.output) : '-' %></td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+</div>
+
+<script>
+const BAHAN  = <%- JSON.stringify(bahan.map(b => ({id:b.id, nama:b.nama, satuan:b.satuan, stok:b.stok}))) %>;
+const PRODUK = <%- JSON.stringify(produk.map(p => ({id:p.id, nama:p.nama, satuan:p.satuan}))) %>;
+let nh = 0, nb = 0;
+
+function tambahHasil(){
+  if (!PRODUK.length) { alert('Belum ada master produk.'); return; }
+  const i = nh++;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><select name="hasil[${i}][produk_id]" class="kontrol">
+      ${PRODUK.map(p => `<option value="${p.id}">${p.nama}</option>`).join('')}</select></td>
+    <td><input type="number" name="hasil[${i}][qty]" class="kontrol tg" min="0" step="1" value="0"></td>
+    <td class="tg"><button type="button" class="btn-hapus" onclick="this.closest('tr').remove()">✕</button></td>`;
+  document.getElementById('baris-hasil').appendChild(tr);
+}
+
+function tambahBahan(pilihId, qty){
+  if (!BAHAN.length) { alert('Belum ada master bahan.'); return null; }
+  const i = nb++;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td><select name="bahan[${i}][bahan_id]" class="kontrol" id="bb${i}" onchange="infoStok(${i})">
+      ${BAHAN.map(b => `<option value="${b.id}" data-stok="${b.stok}" data-sat="${b.satuan}"
+        ${b.id===pilihId?'selected':''}>${b.nama}</option>`).join('')}</select></td>
+    <td><input type="number" name="bahan[${i}][qty]" id="bq${i}" class="kontrol tg"
+               min="0" step="0.01" value="${qty ?? 0}" oninput="infoStok(${i})">
+        <div class="petunjuk tg" id="bs${i}"></div></td>
+    <td class="ka" id="bt${i}"></td>
+    <td class="tg"><button type="button" class="btn-hapus" onclick="this.closest('tr').remove();cekSemua()">✕</button></td>`;
+  document.getElementById('baris-bahan').appendChild(tr);
+  infoStok(i);
+  return i;
+}
+
+function infoStok(i){
+  const opt  = document.getElementById('bb'+i).selectedOptions[0];
+  const stok = parseFloat(opt.dataset.stok);
+  const sat  = opt.dataset.sat;
+  const pakai = parseFloat(document.getElementById('bq'+i).value) || 0;
+  document.getElementById('bs'+i).innerText = sat;
+  const td = document.getElementById('bt'+i);
+  td.innerHTML = `<span class="${pakai > stok ? 't-merah' : 't-hijau'}">${stok.toLocaleString('id-ID')} ${sat}</span>`;
+  cekSemua();
+}
+
+function cekSemua(){
+  const kurang = [];
+  document.querySelectorAll('#baris-bahan tr').forEach(tr => {
+    const i = tr.querySelector('select').id.replace('bb','');
+    const opt = document.getElementById('bb'+i).selectedOptions[0];
+    const pakai = parseFloat(document.getElementById('bq'+i).value) || 0;
+    if (pakai > parseFloat(opt.dataset.stok)) kurang.push(opt.textContent.trim());
+  });
+  document.getElementById('peringatan').innerHTML = kurang.length
+    ? `<div class="pesan pesan-galat" style="margin-top:12px">Stok tidak cukup untuk: <strong>${kurang.join(', ')}</strong>. Catat pembelian dulu.</div>`
+    : '';
+  return kurang.length === 0;
+}
+
+// Hitung kebutuhan bahan dari resep berdasarkan rencana output
+async function isiDariResep(){
+  const rencana = [...document.querySelectorAll('#baris-hasil tr')].map(tr => ({
+    produk_id: tr.querySelector('select').value,
+    qty: parseFloat(tr.querySelector('input').value) || 0,
+  })).filter(r => r.qty > 0);
+
+  if (!rencana.length) { alert('Isi dulu produk dan jumlah hasil yang direncanakan.'); return; }
+
+  const res = await fetch('/api/kebutuhan-resep', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ rencana }),
+  });
+  const j = await res.json();
+  if (!j.ok) { alert(j.pesan); return; }
+  if (!j.data.length) { alert('Resep untuk produk tersebut belum diatur di Master Data → Resep.'); return; }
+
+  document.getElementById('baris-bahan').innerHTML = ''; nb = 0;
+  j.data.forEach(k => tambahBahan(k.bahan_id, Math.round(k.qty * 100) / 100));
+}
+
+document.getElementById('form-produksi').addEventListener('submit', e => {
+  const adaHasil = [...document.querySelectorAll('#baris-hasil input')].some(i => (parseFloat(i.value)||0) > 0);
+  const adaBahan = [...document.querySelectorAll('#baris-bahan input[type=number]')].some(i => (parseFloat(i.value)||0) > 0);
+  if (!adaHasil) { e.preventDefault(); alert('Jumlah hasil produksi belum diisi.'); return; }
+  if (!adaBahan) { e.preventDefault(); alert('Bahan yang dipakai belum diisi.'); return; }
+  if (!cekSemua()) { e.preventDefault(); alert('Ada bahan yang stoknya tidak mencukupi.'); }
+});
+
+tambahHasil();
+tambahBahan();
+</script>
+
+<%- include('partials/bawah') %>

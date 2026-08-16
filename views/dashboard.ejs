@@ -1,0 +1,77 @@
+<%- include('partials/atas') %>
+
+<div class="ringkas">
+  <div class="kotak hijau">
+    <div class="label">Penjualan Hari Ini</div>
+    <div class="nilai t-hijau"><%= rupiah(d.jual.bruto) %></div>
+    <div class="ket"><%= d.jual.nota %> nota · <%= angka(d.qty) %> porsi</div>
+  </div>
+  <div class="kotak">
+    <div class="label">Laba Kotor Hari Ini</div>
+    <div class="nilai t-biru"><%= rupiah(d.jual.netto - d.jual.hpp) %></div>
+    <div class="ket">setelah HPP <%= rupiah(d.jual.hpp) %></div>
+  </div>
+  <div class="kotak ungu">
+    <div class="label">Saldo Kas</div>
+    <div class="nilai"><%= rupiah(d.kas) %></div>
+    <div class="ket">seluruh periode</div>
+  </div>
+  <div class="kotak <%= d.piutang > 0 ? 'hijau' : '' %>">
+    <div class="label">Piutang GrabFood</div>
+    <div class="nilai"><%= rupiah(d.piutang) %></div>
+    <div class="ket"><a href="/kas" class="t-biru">cairkan di menu Kas</a></div>
+  </div>
+  <div class="kotak <%= d.pesananBaru ? 'kuning' : '' %>">
+    <div class="label">Pesanan Menunggu</div>
+    <div class="nilai"><%= d.pesananBaru %></div>
+    <div class="ket"><a href="/pesanan" class="t-biru">lihat daftar</a></div>
+  </div>
+</div>
+
+<% if (d.bahanMenipis.length) { %>
+<div class="card" style="border-left:4px solid var(--kuning)">
+  <div class="card-head"><h2>⚠️ Bahan Perlu Dibeli</h2>
+    <a href="/pembelian" class="btn btn-kecil btn-primer">Belanja</a></div>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th>Bahan</th><th class="ka">Sisa</th><th class="ka">Batas Minimum</th></tr></thead>
+    <tbody><% d.bahanMenipis.forEach(b => { %>
+      <tr><td><strong><%= b.nama %></strong></td>
+          <td class="ka t-merah"><%= angka(b.stok) %> <%= b.satuan %></td>
+          <td class="ka t-lembut"><%= angka(b.stok_min) %> <%= b.satuan %></td></tr>
+    <% }) %></tbody>
+  </table></div>
+</div>
+<% } %>
+
+<div class="card">
+  <div class="card-head"><h2>Stok Produk Siap Jual</h2>
+    <a href="/produksi" class="btn btn-kecil btn-hijau-tua">Produksi</a></div>
+  <% if (!d.produk.length) { %>
+    <p class="kosong">Belum ada produk. Tambahkan lewat <a href="/master" class="t-biru">Master Data</a>.</p>
+  <% } else { %>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th>Produk</th><th class="ka">Harga Retail</th><th class="ka">HPP/unit</th><th class="ka">Stok</th></tr></thead>
+    <tbody><% d.produk.forEach(p => { %>
+      <tr>
+        <td><strong><%= p.nama %></strong></td>
+        <td class="ka"><%= rupiah(p.harga) %></td>
+        <td class="ka t-lembut"><%= rupiah(p.hpp_avg) %></td>
+        <td class="ka"><span class="badge <%= p.stok <= 0 ? 'b-merah' : (p.stok <= 5 ? 'b-kuning' : 'b-hijau') %>">
+          <%= angka(p.stok) %> <%= p.satuan %></span></td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>Aksi Cepat</h2></div>
+  <div class="baris">
+    <a href="/kasir" class="btn btn-sukses" style="flex:1">🧾 Buka Kasir</a>
+    <a href="/pembelian" class="btn btn-primer" style="flex:1">🛒 Catat Belanja</a>
+    <a href="/produksi" class="btn btn-hijau-tua" style="flex:1">🍲 Catat Produksi</a>
+    <a href="/laporan/keuangan" class="btn btn-abu" style="flex:1">📊 Laporan Keuangan</a>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

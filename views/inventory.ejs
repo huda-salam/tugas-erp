@@ -1,0 +1,91 @@
+<%- include('partials/atas') %>
+
+<div class="tab">
+  <a href="/inventory?tipe=bahan"  class="<%= tipe==='bahan'  ? 'on':'' %>">🌾 Stok Bahan</a>
+  <a href="/inventory?tipe=produk" class="<%= tipe==='produk' ? 'on':'' %>">🍲 Stok Produk Jadi</a>
+</div>
+
+<% const daftar = tipe === 'bahan' ? bahan : produk; %>
+<% const totalNilai = daftar.reduce((s,x) => s + x.nilai_persediaan, 0); %>
+
+<div class="ringkas">
+  <div class="kotak">
+    <div class="label">Jenis Item</div>
+    <div class="nilai"><%= daftar.length %></div>
+  </div>
+  <div class="kotak hijau">
+    <div class="label">Nilai Persediaan</div>
+    <div class="nilai t-hijau"><%= rupiah(totalNilai) %></div>
+    <div class="ket">harga rata-rata bergerak</div>
+  </div>
+  <% if (tipe === 'bahan') { %>
+  <div class="kotak merah">
+    <div class="label">Di Bawah Batas Minimum</div>
+    <div class="nilai"><%= bahan.filter(b => b.stok_min > 0 && b.stok <= b.stok_min).length %></div>
+  </div>
+  <% } %>
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <h2><%= tipe === 'bahan' ? 'Persediaan Bahan Baku' : 'Persediaan Produk Jadi' %></h2>
+    <p>Klik baris untuk melihat kartu stok</p>
+  </div>
+  <% if (!daftar.length) { %>
+    <p class="kosong">Belum ada data. Tambahkan di <a href="/master" class="t-biru">Master Data</a>.</p>
+  <% } else { %>
+  <div class="tabel-scroll"><table>
+    <thead><tr>
+      <th>Nama</th><th class="ka">Stok</th>
+      <th class="ka"><%= tipe === 'bahan' ? 'Harga Rata-rata' : 'HPP Rata-rata' %></th>
+      <th class="ka">Nilai Persediaan</th>
+      <% if (tipe === 'bahan') { %><th class="ka">Min.</th><% } %>
+      <th class="tg">Status</th>
+    </tr></thead>
+    <tbody><% daftar.forEach(x => { %>
+      <% const rendah = tipe==='bahan' ? (x.stok_min > 0 && x.stok <= x.stok_min) : x.stok <= 5; %>
+      <tr style="cursor:pointer" onclick="location.href='/inventory?tipe=<%= tipe %>&item=<%= x.id %>'">
+        <td><strong><%= x.nama %></strong></td>
+        <td class="ka"><%= angka(x.stok) %> <span class="t-lembut"><%= x.satuan %></span></td>
+        <td class="ka t-lembut"><%= rupiah(tipe === 'bahan' ? x.harga_avg : x.hpp_avg) %></td>
+        <td class="ka"><%= rupiah(x.nilai_persediaan) %></td>
+        <% if (tipe === 'bahan') { %><td class="ka t-lembut"><%= angka(x.stok_min) %></td><% } %>
+        <td class="tg"><span class="badge <%= x.stok<=0 ? 'b-merah' : (rendah ? 'b-kuning':'b-hijau') %>">
+          <%= x.stok<=0 ? 'Habis' : (rendah ? 'Menipis' : 'Aman') %></span></td>
+      </tr>
+    <% }) %></tbody>
+    <tfoot><tr class="baris-total">
+      <td colspan="3" class="ka">TOTAL NILAI PERSEDIAAN</td>
+      <td class="ka"><%= rupiah(totalNilai) %></td>
+      <td colspan="<%= tipe === 'bahan' ? 2 : 1 %>"></td>
+    </tr></tfoot>
+  </table></div>
+  <% } %>
+</div>
+
+<% if (itemId) { %>
+  <% const item = daftar.find(x => x.id === itemId); %>
+  <div class="card">
+    <div class="card-head">
+      <h2>Kartu Stok — <%= item ? item.nama : '-' %></h2>
+      <a href="/inventory?tipe=<%= tipe %>" class="btn btn-kecil btn-abu">Tutup</a>
+    </div>
+    <% if (!kartu.length) { %><p class="kosong">Belum ada mutasi.</p><% } else { %>
+    <div class="tabel-scroll"><table>
+      <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Sumber</th><th class="ka">Qty</th><th class="ka">Nilai</th></tr></thead>
+      <tbody><% kartu.forEach(m => { %>
+        <tr>
+          <td class="t-lembut"><%= m.tanggal %></td>
+          <td><%= m.keterangan %></td>
+          <td><span class="badge b-abu"><%= m.ref_tipe %></span></td>
+          <td class="ka <%= m.qty >= 0 ? 't-hijau':'t-merah' %>"><%= m.qty >= 0 ? '+' : '' %><%= angka(m.qty) %></td>
+          <td class="ka <%= m.nilai >= 0 ? 't-hijau':'t-merah' %>"><%= rupiah(m.nilai) %></td>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+    <p class="petunjuk">Stok dihitung dari penjumlahan mutasi di atas, bukan dari kolom yang diubah manual.</p>
+    <% } %>
+  </div>
+<% } %>
+
+<%- include('partials/bawah') %>

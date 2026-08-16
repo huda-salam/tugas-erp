@@ -1,0 +1,372 @@
+<%- include('partials/atas') %>
+
+<div class="tabs-container">
+  <button type="button" id="btn-tab-retail"  class="tab-btn active" onclick="gantiTab('retail')">🛒 Retail</button>
+  <button type="button" id="btn-tab-pesanan" class="tab-btn"        onclick="gantiTab('pesanan')">📦 Pesanan PO</button>
+  <button type="button" id="btn-tab-grab"    class="tab-btn"        onclick="gantiTab('grab')">💚 GrabFood</button>
+</div>
+
+<form method="post" action="/kasir" id="form-kasir">
+  <input type="hidden" name="kanal"      id="in-kanal"   value="retail">
+  <input type="hidden" name="pesanan_id" id="in-pesanan">
+  <input type="hidden" name="ref_luar"   id="in-ref">
+
+  <div class="card">
+    <div class="card-head">
+      <h2 id="card-main-title">Daftar Menu Produk</h2>
+      <span id="badge-status" class="badge-tipe bg-retail">Retail</span>
+    </div>
+
+    <div class="product-list"        id="ui-retail-container"></div>
+    <div class="order-list-container" id="ui-pesanan-container" style="display:none"></div>
+    <div class="order-list-container" id="ui-grab-container"    style="display:none"></div>
+  </div>
+
+  <div class="card" id="card-detail-paten" style="display:none">
+    <div class="card-head"><h2 id="detail-paten-title">Rincian Item Pembelian</h2></div>
+    <div class="tabel-scroll">
+      <table>
+        <thead><tr>
+          <th>Nama Menu Barang</th>
+          <th class="tg" style="width:60px">Qty</th>
+          <th class="ka" style="width:110px">Subtotal</th>
+        </tr></thead>
+        <tbody id="tabel-detail-paten-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" id="card-pembayaran">
+    <div class="card-head"><h2>Metode Pembayaran</h2></div>
+
+    <div class="payment-options">
+      <label id="lbl-tunai" class="pay-label selected-cash">
+        <input type="radio" name="metode_bayar" value="tunai" checked onchange="handleMetodeBayar('tunai')">
+        💵 TUNAI
+      </label>
+      <label id="lbl-qris" class="pay-label">
+        <input type="radio" name="metode_bayar" value="qris" onchange="handleMetodeBayar('qris')">
+        📱 QRIS
+      </label>
+    </div>
+
+    <div id="box-kalkulator-tunai" class="cash-calculator-box">
+      <div class="baris">
+        <div class="grup">
+          <label for="uang_dibayar">Uang Diterima (Rp)</label>
+          <input type="number" id="uang_dibayar" name="uang_diterima" class="kontrol"
+                 placeholder="Masukkan nominal uang" min="0" step="500" oninput="hitungKembalian()">
+        </div>
+        <div class="grup">
+          <label>Uang Kembalian</label>
+          <input type="text" id="uang_kembalian" class="kontrol txt-kembalian" value="Rp 0" readonly>
+        </div>
+      </div>
+      <div class="baris" id="uang-cepat"></div>
+    </div>
+  </div>
+
+  <div class="card" id="card-info-grab" style="display:none">
+    <div class="pesan pesan-ok" style="margin:0">
+      Komisi platform <strong><%= komisiGrab %>%</strong> dipotong otomatis, dan nilai bersihnya
+      <strong>tidak langsung masuk kas</strong> — tercatat sebagai piutang GrabFood yang dicairkan
+      lewat menu <a href="/kas">Kas</a>.
+    </div>
+  </div>
+
+  <div class="bar-bawah">
+    <div class="total-section">
+      <span class="label" id="label-items-count">0 Item Terpilih</span>
+      <span class="total" id="grand-total">Rp 0</span>
+      <span class="label" id="info-komisi"></span>
+    </div>
+    <button type="submit" class="btn btn-sukses" id="btn-proses">PROSES NOTA</button>
+  </div>
+</form>
+
+<% if (notaTerakhir.length) { %>
+<div class="card">
+  <div class="card-head"><h2>Nota Terakhir</h2></div>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th>No. Nota</th><th>Kanal</th><th>Bayar</th><th class="ka">Bruto</th><th class="ka">Diterima</th></tr></thead>
+    <tbody><% notaTerakhir.forEach(n => { %>
+      <tr>
+        <td class="mono"><%= n.no_nota %></td>
+        <td><span class="badge <%= n.kanal==='grab'?'b-ungu':(n.kanal==='pesanan'?'b-biru':'b-hijau') %>"><%= n.kanal %></span></td>
+        <td class="t-lembut"><%= n.metode_bayar %></td>
+        <td class="ka"><%= rupiah(n.bruto) %></td>
+        <td class="ka t-hijau"><%= rupiah(n.netto) %></td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+</div>
+<% } %>
+
+<script>
+// ---------- data dari server ----------
+const masterProduk    = <%- JSON.stringify(produk.map(p => ({ id:p.id, nama:p.nama, satuan:p.satuan, harga:p.harga, stok:p.stok }))) %>;
+const daftarPesananPO = <%- JSON.stringify(antreanPesanan) %>;
+const antreanGrabFood = <%- JSON.stringify(antreanGrab) %>;
+const KOMISI_GRAB     = <%= komisiGrab %>;
+
+const rp = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+
+let tabAktif = 'retail';
+let globalGrandTotal = 0;
+let metodePembayaranAktif = 'tunai';
+let idPesananTerpilih = null;
+let idGrabTerpilih = null;
+let qtyRetail = {};
+masterProduk.forEach(p => qtyRetail[p.id] = 0);
+
+// ---------- 1. RENDER DAFTAR PRODUK RETAIL ----------
+function renderRetailList() {
+  const c = document.getElementById('ui-retail-container');
+  if (!masterProduk.length) {
+    c.innerHTML = '<p class="kosong">Belum ada produk. Tambahkan di <a href="/master" class="t-biru">Master Data</a>.</p>';
+    return;
+  }
+  c.innerHTML = '';
+  masterProduk.forEach(p => {
+    const habis = p.stok <= 0;
+    const infoStok = habis
+      ? '<span class="product-stock stock-out">Stok Habis</span>'
+      : `<span class="product-stock ${p.stok > 5 ? 'stock-ok' : ''}">Stok: ${p.stok} ${p.satuan}</span>`;
+    const div = document.createElement('div');
+    div.className = 'product-item';
+    div.innerHTML = `
+      <div class="product-info">
+        <span class="product-name">${p.nama}</span>
+        <div class="product-meta">
+          <span class="product-price">${rp(p.harga)}</span>${infoStok}
+        </div>
+      </div>
+      <div class="counter-container">
+        <button type="button" class="btn-counter" onclick="ubahQtyRetail(${p.id},-1)" ${habis?'disabled':''}>−</button>
+        <input type="number" class="qty-input" id="input-retail-${p.id}" value="${qtyRetail[p.id]}"
+               min="0" max="${p.stok}" oninput="inputManualRetail(${p.id}, this.value)" ${habis?'disabled':''}>
+        <button type="button" class="btn-counter" onclick="ubahQtyRetail(${p.id},1)" ${habis?'disabled':''}>+</button>
+      </div>`;
+    c.appendChild(div);
+  });
+}
+
+// ---------- 2. RENDER ANTREAN PESANAN PO ----------
+function renderPesananPOList() {
+  const c = document.getElementById('ui-pesanan-container');
+  if (!daftarPesananPO.length) {
+    c.innerHTML = '<p class="kosong">Tidak ada pesanan menunggu. Buat dulu di <a href="/pesanan" class="t-biru">menu Pesanan</a>.</p>';
+    return;
+  }
+  c.innerHTML = '';
+  daftarPesananPO.forEach(o => {
+    const div = document.createElement('div');
+    div.className = 'order-select-card' + (o.id === idPesananTerpilih ? ' selected-pesanan' : '');
+    div.onclick = () => pilihNamaPesananPO(o.id);
+    div.innerHTML = `
+      <div class="customer-title-row"><span>👤 ${o.pelanggan}</span><span class="mono">${o.no_pesanan}</span></div>
+      <div class="meta-summary">Total Tagihan: <strong>${rp(o.total)}</strong> (${o.total_qty} Item)${
+        o.tanggal_kirim ? ' · kirim ' + o.tanggal_kirim : ''}</div>`;
+    c.appendChild(div);
+  });
+}
+
+// ---------- 3. RENDER ANTREAN GRABFOOD ----------
+function renderGrabList() {
+  const c = document.getElementById('ui-grab-container');
+  if (!antreanGrabFood.length) {
+    c.innerHTML = '<p class="kosong">Tidak ada order GrabFood menunggu. Catat order masuk di <a href="/pesanan" class="t-biru">menu Pesanan</a>.</p>';
+    return;
+  }
+  c.innerHTML = '';
+  antreanGrabFood.forEach(o => {
+    const div = document.createElement('div');
+    div.className = 'order-select-card' + (o.id === idGrabTerpilih ? ' selected-grab' : '');
+    div.onclick = () => pilihUserGrab(o.id);
+    div.innerHTML = `
+      <div class="customer-title-row"><span>💚 ${o.ref_luar || o.pelanggan}</span><span class="mono">${o.no_pesanan}</span></div>
+      <div class="meta-summary">Total Aplikasi: <strong>${rp(o.total)}</strong> (${o.total_qty} Item)</div>`;
+    c.appendChild(div);
+  });
+}
+
+// ---------- pemilihan antrean ----------
+function pilihNamaPesananPO(id) {
+  idPesananTerpilih = id;
+  renderPesananPOList();
+  const d = daftarPesananPO.find(o => o.id === id);
+  isiTabelRincianPaten(d.items, 'Rincian Item Pesanan PO');
+  document.getElementById('in-pesanan').value = id;
+  document.getElementById('in-ref').value = '';
+  setBottomBarInfo(d.total_qty, d.total);
+}
+
+function pilihUserGrab(id) {
+  idGrabTerpilih = id;
+  renderGrabList();
+  const d = antreanGrabFood.find(o => o.id === id);
+  isiTabelRincianPaten(d.items, 'Rincian Item GrabFood Order');
+  document.getElementById('in-pesanan').value = id;
+  document.getElementById('in-ref').value = d.ref_luar || '';
+  setBottomBarInfo(d.total_qty, d.total);
+}
+
+function isiTabelRincianPaten(items, judul) {
+  document.getElementById('detail-paten-title').innerText = judul;
+  document.getElementById('tabel-detail-paten-body').innerHTML = items.map(i =>
+    `<tr><td>📋 <strong>${i.nama}</strong></td><td class="tg">${i.qty}</td><td class="ka">${rp(i.subtotal)}</td></tr>`
+  ).join('');
+  document.getElementById('card-detail-paten').style.display = 'block';
+}
+
+// ---------- pengendali tab ----------
+function gantiTab(tipe) {
+  tabAktif = tipe;
+  document.getElementById('in-kanal').value = tipe;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('btn-tab-' + tipe).classList.add('active');
+
+  const badge = document.getElementById('badge-status');
+  const title = document.getElementById('card-main-title');
+
+  ['retail','pesanan','grab'].forEach(t =>
+    document.getElementById('ui-' + t + '-container').style.display = 'none');
+  document.getElementById('card-detail-paten').style.display = 'none';
+  document.getElementById('in-pesanan').value = '';
+  document.getElementById('in-ref').value = '';
+
+  if (tipe === 'retail') {
+    title.innerText = 'Daftar Menu Produk';
+    badge.innerText = 'Retail'; badge.className = 'badge-tipe bg-retail';
+    document.getElementById('ui-retail-container').style.display = 'flex';
+    document.getElementById('card-pembayaran').style.display = 'block';
+    document.getElementById('card-info-grab').style.display = 'none';
+    kalkulasiTotalRetail();
+  } else if (tipe === 'pesanan') {
+    title.innerText = 'Pilih Nama Pemesan PO';
+    badge.innerText = 'Pesanan PO'; badge.className = 'badge-tipe bg-pesanan';
+    document.getElementById('ui-pesanan-container').style.display = 'flex';
+    document.getElementById('card-pembayaran').style.display = 'block';
+    document.getElementById('card-info-grab').style.display = 'none';
+    if (idPesananTerpilih) pilihNamaPesananPO(idPesananTerpilih); else setBottomBarInfo(0, 0);
+  } else {
+    title.innerText = 'Pilih Antrean User Grab';
+    badge.innerText = 'GrabFood'; badge.className = 'badge-tipe bg-grab';
+    document.getElementById('ui-grab-container').style.display = 'flex';
+    document.getElementById('card-pembayaran').style.display = 'none';  // Grab tidak bayar di kasir
+    document.getElementById('card-info-grab').style.display = 'block';
+    if (idGrabTerpilih) pilihUserGrab(idGrabTerpilih); else setBottomBarInfo(0, 0);
+  }
+}
+
+// ---------- counter retail ----------
+function ubahQtyRetail(id, delta) {
+  const p = masterProduk.find(x => x.id === id);
+  let t = qtyRetail[id] + delta;
+  if (t < 0) t = 0;
+  if (t > p.stok) { alert('Stok gudang tidak cukup! Sisa ' + p.stok + ' ' + p.satuan + '.'); return; }
+  qtyRetail[id] = t;
+  document.getElementById('input-retail-' + id).value = t;
+  kalkulasiTotalRetail();
+}
+
+function inputManualRetail(id, nilai) {
+  const p = masterProduk.find(x => x.id === id);
+  let q = parseInt(nilai) || 0;
+  if (q < 0) q = 0;
+  if (q > p.stok) { alert('Stok tidak cukup! Sisa ' + p.stok + ' ' + p.satuan + '.'); q = p.stok; }
+  document.getElementById('input-retail-' + id).value = q;
+  qtyRetail[id] = q;
+  kalkulasiTotalRetail();
+}
+
+function kalkulasiTotalRetail() {
+  if (tabAktif !== 'retail') return;
+  let total = 0, qty = 0;
+  masterProduk.forEach(p => { total += p.harga * qtyRetail[p.id]; qty += qtyRetail[p.id]; });
+  setBottomBarInfo(qty, total);
+}
+
+function setBottomBarInfo(qty, total) {
+  globalGrandTotal = total;
+  document.getElementById('grand-total').innerText = rp(total);
+  document.getElementById('label-items-count').innerText = qty + ' Item Terpilih';
+  const ik = document.getElementById('info-komisi');
+  ik.innerText = (tabAktif === 'grab' && total)
+    ? `komisi ${KOMISI_GRAB}% (${rp(total*KOMISI_GRAB/100)}) → piutang ${rp(total - total*KOMISI_GRAB/100)}`
+    : '';
+  hitungKembalian();
+  renderUangCepat();
+}
+
+// ---------- pembayaran ----------
+function handleMetodeBayar(m) {
+  metodePembayaranAktif = m;
+  document.getElementById('lbl-tunai').className = m === 'tunai' ? 'pay-label selected-cash' : 'pay-label';
+  document.getElementById('lbl-qris').className  = m === 'qris'  ? 'pay-label selected-qris' : 'pay-label';
+  document.getElementById('box-kalkulator-tunai').style.display = m === 'tunai' ? 'block' : 'none';
+  hitungKembalian();
+}
+
+function hitungKembalian() {
+  const inp = document.getElementById('uang_dibayar');
+  const out = document.getElementById('uang_kembalian');
+  const bayar = parseFloat(inp.value) || 0;
+  const sisa = bayar - globalGrandTotal;
+  if (bayar === 0) { out.value = 'Rp 0'; out.style.color = ''; }
+  else if (sisa < 0) { out.value = 'Uang Kurang ' + rp(-sisa); out.style.color = 'var(--merah)'; }
+  else { out.value = rp(sisa); out.style.color = 'var(--hijau-teks)'; }
+}
+
+// tombol nominal lazim supaya kasir tidak perlu mengetik
+function renderUangCepat() {
+  const box = document.getElementById('uang-cepat');
+  if (globalGrandTotal <= 0) { box.innerHTML = ''; return; }
+  const bulat = n => Math.ceil(globalGrandTotal / n) * n;
+  const opsi = [...new Set([globalGrandTotal, bulat(5000), bulat(10000), bulat(50000)])].slice(0, 4);
+  box.innerHTML = opsi.map(v =>
+    `<button type="button" class="btn btn-abu btn-kecil" style="flex:1"
+       onclick="document.getElementById('uang_dibayar').value=${v};hitungKembalian()">${rp(v)}</button>`).join('');
+}
+
+// ---------- submit ----------
+document.getElementById('form-kasir').addEventListener('submit', function (e) {
+  if (globalGrandTotal <= 0) { e.preventDefault(); alert('Belum ada data transaksi yang dipilih!'); return; }
+  if (tabAktif === 'pesanan' && !idPesananTerpilih) { e.preventDefault(); alert('Pilih pesanan yang akan ditagih.'); return; }
+  if (tabAktif === 'grab'    && !idGrabTerpilih)    { e.preventDefault(); alert('Pilih antrean order Grab.'); return; }
+
+  if (tabAktif !== 'grab' && metodePembayaranAktif === 'tunai') {
+    const bayar = parseFloat(document.getElementById('uang_dibayar').value) || 0;
+    if (bayar < globalGrandTotal) { e.preventDefault(); alert('Gagal simpan nota! Nilai uang diterima masih kurang.'); return; }
+  }
+
+  // susun baris item sebagai input tersembunyi sesaat sebelum dikirim
+  this.querySelectorAll('.baris-item').forEach(el => el.remove());
+  let baris = [];
+  if (tabAktif === 'retail') {
+    baris = masterProduk.filter(p => qtyRetail[p.id] > 0)
+      .map(p => ({ produk_id: p.id, qty: qtyRetail[p.id], harga: p.harga }));
+  } else {
+    const src = tabAktif === 'pesanan'
+      ? daftarPesananPO.find(o => o.id === idPesananTerpilih)
+      : antreanGrabFood.find(o => o.id === idGrabTerpilih);
+    baris = src.items.map(i => ({ produk_id: i.produk_id, qty: i.qty, harga: i.harga }));
+  }
+  baris.forEach((b, i) => {
+    Object.entries(b).forEach(([k, v]) => {
+      const el = document.createElement('input');
+      el.type = 'hidden'; el.className = 'baris-item';
+      el.name = `items[${i}][${k}]`; el.value = v;
+      this.appendChild(el);
+    });
+  });
+  document.getElementById('btn-proses').disabled = true;
+});
+
+renderRetailList();
+renderPesananPOList();
+renderGrabList();
+gantiTab('<%= kanal %>');
+</script>
+
+<%- include('partials/bawah') %>

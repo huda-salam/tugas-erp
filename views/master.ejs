@@ -1,0 +1,218 @@
+<%- include('partials/atas') %>
+
+<div class="tab">
+  <a href="/master?tab=produk" class="<%= tab==='produk'?'on':'' %>">🍲 Produk & Harga</a>
+  <a href="/master?tab=bahan"  class="<%= tab==='bahan' ?'on':'' %>">🌾 Bahan</a>
+  <a href="/master?tab=resep"  class="<%= tab==='resep' ?'on':'' %>">📖 Resep (BOM)</a>
+  <a href="/master?tab=mitra"  class="<%= tab==='mitra' ?'on':'' %>">🤝 Supplier & Pelanggan</a>
+</div>
+
+<% if (tab === 'produk') { %>
+  <div class="card">
+    <div class="card-head"><h2>Tambah / Ubah Produk</h2></div>
+    <form method="post" action="/master/produk">
+      <input type="hidden" name="id" id="p-id">
+      <div class="baris">
+        <div class="grup" style="min-width:200px">
+          <label for="p-nama">Nama Produk</label>
+          <input type="text" id="p-nama" name="nama" class="kontrol" placeholder="Contoh: Bubur Bayi Beras Merah" required>
+        </div>
+        <div class="grup" style="max-width:120px">
+          <label for="p-satuan">Satuan</label>
+          <input type="text" id="p-satuan" name="satuan" class="kontrol" value="porsi">
+        </div>
+      </div>
+      <div class="baris">
+        <div class="grup"><label for="p-r">Harga Retail</label>
+          <input type="number" id="p-r" name="h_retail" class="kontrol" min="0" step="500" value="0"></div>
+        <div class="grup"><label for="p-p">Harga Pesanan</label>
+          <input type="number" id="p-p" name="h_pesanan" class="kontrol" min="0" step="500" value="0"></div>
+        <div class="grup"><label for="p-g">Harga GrabFood</label>
+          <input type="number" id="p-g" name="h_grab" class="kontrol" min="0" step="500" value="0"></div>
+      </div>
+      <div class="baris">
+        <button type="submit" class="btn btn-sukses" style="flex:1">SIMPAN PRODUK</button>
+        <button type="button" class="btn btn-abu" onclick="resetProduk()">Batal Ubah</button>
+      </div>
+      <p class="petunjuk">Harga Grab biasanya dinaikkan untuk menutup komisi platform.</p>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Daftar Produk</h2></div>
+    <% if (!produk.length) { %><p class="kosong">Belum ada produk.</p><% } else { %>
+    <div class="tabel-scroll"><table>
+      <thead><tr><th>Nama</th><th class="ka">Retail</th><th class="ka">Pesanan</th><th class="ka">Grab</th><th class="ka">HPP</th><th></th></tr></thead>
+      <tbody><% produk.forEach(p => { %>
+        <tr>
+          <td><strong><%= p.nama %></strong> <span class="t-lembut">/<%= p.satuan %></span></td>
+          <td class="ka"><%= rupiah(p.h_retail || 0) %></td>
+          <td class="ka"><%= rupiah(p.h_pesanan || 0) %></td>
+          <td class="ka"><%= rupiah(p.h_grab || 0) %></td>
+          <td class="ka t-lembut"><%= rupiah(p.hpp_avg) %></td>
+          <td class="tg"><button class="btn btn-kecil btn-abu" onclick='isiProduk(<%- JSON.stringify(p) %>)'>Ubah</button></td>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+    <% } %>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Pengaturan Usaha</h2></div>
+    <form method="post" action="/master/pengaturan">
+      <div class="baris">
+        <div class="grup"><label for="nu">Nama Usaha</label>
+          <input type="text" id="nu" name="nama_usaha" class="kontrol" value="<%= namaUsaha %>"></div>
+        <div class="grup" style="max-width:180px"><label for="kg">Komisi GrabFood (%)</label>
+          <input type="number" id="kg" name="komisi_grab_persen" class="kontrol" min="0" max="100" step="1" value="<%= komisiGrab %>"></div>
+      </div>
+      <button type="submit" class="btn btn-primer">Simpan Pengaturan</button>
+    </form>
+  </div>
+
+  <script>
+  function isiProduk(p){
+    p_id.value = p.id; document.getElementById('p-nama').value = p.nama;
+    document.getElementById('p-satuan').value = p.satuan;
+    document.getElementById('p-r').value = p.h_retail || 0;
+    document.getElementById('p-p').value = p.h_pesanan || 0;
+    document.getElementById('p-g').value = p.h_grab || 0;
+    scrollTo({top:0, behavior:'smooth'});
+  }
+  const p_id = document.getElementById('p-id');
+  function resetProduk(){ p_id.value=''; document.querySelector('form[action="/master/produk"]').reset(); }
+  </script>
+
+<% } else if (tab === 'bahan') { %>
+  <div class="card">
+    <div class="card-head"><h2>Tambah / Ubah Bahan</h2></div>
+    <form method="post" action="/master/bahan">
+      <input type="hidden" name="id" id="b-id">
+      <div class="baris">
+        <div class="grup" style="min-width:200px">
+          <label for="b-nama">Nama Bahan</label>
+          <input type="text" id="b-nama" name="nama" class="kontrol" placeholder="Contoh: Beras Merah Organik" required>
+        </div>
+        <div class="grup" style="max-width:130px">
+          <label for="b-satuan">Satuan</label>
+          <select id="b-satuan" name="satuan" class="kontrol">
+            <option>gram</option><option>kg</option><option>ml</option>
+            <option>liter</option><option>butir</option><option>pcs</option><option>sisir</option>
+          </select>
+        </div>
+        <div class="grup" style="max-width:150px">
+          <label for="b-min">Batas Minimum</label>
+          <input type="number" id="b-min" name="stok_min" class="kontrol" min="0" step="0.01" value="0">
+        </div>
+      </div>
+      <div class="baris">
+        <button type="submit" class="btn btn-sukses" style="flex:1">SIMPAN BAHAN</button>
+        <button type="button" class="btn btn-abu" onclick="document.getElementById('b-id').value='';this.closest('form').reset()">Batal Ubah</button>
+      </div>
+      <p class="petunjuk">Satuan sebaiknya sekecil satuan pemakaian di resep (gram/ml) supaya perhitungan HPP akurat.</p>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Daftar Bahan</h2></div>
+    <% if (!bahan.length) { %><p class="kosong">Belum ada bahan.</p><% } else { %>
+    <div class="tabel-scroll"><table>
+      <thead><tr><th>Nama</th><th class="ka">Stok</th><th class="ka">Harga Rata-rata</th><th class="ka">Min.</th><th></th></tr></thead>
+      <tbody><% bahan.forEach(b => { %>
+        <tr>
+          <td><strong><%= b.nama %></strong></td>
+          <td class="ka"><%= angka(b.stok) %> <span class="t-lembut"><%= b.satuan %></span></td>
+          <td class="ka"><%= rupiah(b.harga_avg) %></td>
+          <td class="ka t-lembut"><%= angka(b.stok_min) %></td>
+          <td class="tg"><button class="btn btn-kecil btn-abu" onclick='isiBahan(<%- JSON.stringify(b) %>)'>Ubah</button></td>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+    <% } %>
+  </div>
+  <script>
+  function isiBahan(b){
+    document.getElementById('b-id').value = b.id;
+    document.getElementById('b-nama').value = b.nama;
+    document.getElementById('b-satuan').value = b.satuan;
+    document.getElementById('b-min').value = b.stok_min;
+    scrollTo({top:0, behavior:'smooth'});
+  }
+  </script>
+
+<% } else if (tab === 'resep') { %>
+  <div class="card">
+    <div class="card-head"><h2>Resep / BOM</h2><p>Kebutuhan bahan untuk 1 satuan produk</p></div>
+    <form method="post" action="/master/resep">
+      <div class="baris">
+        <div class="grup"><label for="r-p">Produk</label>
+          <select id="r-p" name="produk_id" class="kontrol" required>
+            <% produkAktif.forEach(p => { %><option value="<%= p.id %>"><%= p.nama %></option><% }) %>
+          </select></div>
+        <div class="grup"><label for="r-b">Bahan</label>
+          <select id="r-b" name="bahan_id" class="kontrol" required>
+            <% bahan.forEach(b => { %><option value="<%= b.id %>"><%= b.nama %> (<%= b.satuan %>)</option><% }) %>
+          </select></div>
+        <div class="grup" style="max-width:150px"><label for="r-q">Jumlah / unit</label>
+          <input type="number" id="r-q" name="qty" class="kontrol" min="0" step="0.01" required></div>
+      </div>
+      <button type="submit" class="btn btn-sukses btn-blok">SIMPAN BARIS RESEP</button>
+      <p class="petunjuk">Dipakai tombol "Isi Bahan dari Resep" di menu Produksi untuk menghitung kebutuhan otomatis.</p>
+    </form>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h2>Daftar Resep</h2></div>
+    <% if (!resep.length) { %><p class="kosong">Belum ada resep.</p><% } else { %>
+    <div class="tabel-scroll"><table>
+      <thead><tr><th>Produk</th><th>Bahan</th><th class="ka">Per 1 unit</th><th></th></tr></thead>
+      <tbody><% resep.forEach(r => { %>
+        <tr>
+          <td><strong><%= r.produk %></strong></td>
+          <td><%= r.bahan %></td>
+          <td class="ka"><%= angka(r.qty) %> <span class="t-lembut"><%= r.satuan %></span></td>
+          <td class="tg"><form method="post" action="/master/resep/<%= r.id %>/hapus"
+                onsubmit="return confirm('Hapus baris resep ini?')"><button class="btn-hapus">✕</button></form></td>
+        </tr>
+      <% }) %></tbody>
+    </table></div>
+    <% } %>
+  </div>
+
+<% } else { %>
+  <div class="card">
+    <div class="card-head"><h2>Tambah Supplier / Pelanggan</h2></div>
+    <form method="post" action="/master/mitra">
+      <div class="baris">
+        <div class="grup" style="max-width:160px"><label for="m-j">Jenis</label>
+          <select id="m-j" name="jenis" class="kontrol">
+            <option value="supplier">Supplier</option><option value="pelanggan">Pelanggan</option>
+          </select></div>
+        <div class="grup" style="min-width:180px"><label for="m-n">Nama</label>
+          <input type="text" id="m-n" name="nama" class="kontrol" required></div>
+        <div class="grup" style="max-width:180px"><label for="m-t">Telepon</label>
+          <input type="text" id="m-t" name="telp" class="kontrol" placeholder="opsional"></div>
+      </div>
+      <button type="submit" class="btn btn-sukses btn-blok">SIMPAN</button>
+    </form>
+  </div>
+
+  <div class="baris">
+    <div class="card" style="flex:1; min-width:260px">
+      <div class="card-head"><h2>Supplier</h2></div>
+      <% if (!supplier.length) { %><p class="kosong">Belum ada.</p><% } else { %>
+      <table><tbody><% supplier.forEach(s => { %>
+        <tr><td><strong><%= s.nama %></strong></td><td class="ka t-lembut"><%= s.telp || '-' %></td></tr>
+      <% }) %></tbody></table><% } %>
+    </div>
+    <div class="card" style="flex:1; min-width:260px">
+      <div class="card-head"><h2>Pelanggan</h2></div>
+      <% if (!pelanggan.length) { %><p class="kosong">Belum ada.</p><% } else { %>
+      <table><tbody><% pelanggan.forEach(p => { %>
+        <tr><td><strong><%= p.nama %></strong></td><td class="ka t-lembut"><%= p.telp || '-' %></td></tr>
+      <% }) %></tbody></table><% } %>
+    </div>
+  </div>
+<% } %>
+
+<%- include('partials/bawah') %>

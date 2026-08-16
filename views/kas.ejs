@@ -1,0 +1,157 @@
+<%- include('partials/atas') %>
+
+<form method="get" action="/kas" class="card no-print" style="padding:12px">
+  <div class="baris" style="align-items:flex-end">
+    <div class="grup"><label for="dari">Dari</label>
+      <input type="date" id="dari" name="dari" class="kontrol" value="<%= dari %>"></div>
+    <div class="grup"><label for="sampai">Sampai</label>
+      <input type="date" id="sampai" name="sampai" class="kontrol" value="<%= sampai %>"></div>
+    <div class="grup" style="max-width:120px"><button class="btn btn-primer btn-blok">Tampilkan</button></div>
+    <div class="grup" style="max-width:120px"><button type="button" class="btn btn-abu btn-blok" onclick="print()">Cetak</button></div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-head">
+    <div><h2>Buku Kas Harian</h2><p>Arus kas masuk & keluar operasional</p></div>
+    <div class="t-lembut" style="font-size:12px;text-align:right">
+      <strong>Periode</strong><br><%= tglID(k.dari) %><%= k.dari !== k.sampai ? ' – ' + tglID(k.sampai) : '' %>
+    </div>
+  </div>
+
+  <div class="ringkas">
+    <div class="kotak"><div class="label">Saldo Awal</div>
+      <div class="nilai t-lembut"><%= rupiah(k.saldoAwal) %></div></div>
+    <div class="kotak hijau"><div class="label">Kas Masuk</div>
+      <div class="nilai t-hijau"><%= rupiah(k.masuk) %></div></div>
+    <div class="kotak merah"><div class="label">Kas Keluar</div>
+      <div class="nilai t-merah"><%= rupiah(k.keluar) %></div></div>
+    <div class="kotak ungu"><div class="label">Saldo Akhir</div>
+      <div class="nilai t-biru"><%= rupiah(k.saldoAkhir) %></div></div>
+  </div>
+
+  <div class="judul-seksi">Log Mutasi Kas</div>
+  <div class="tabel-scroll"><table>
+    <thead><tr>
+      <th style="width:90px">Tanggal</th><th class="tg" style="width:60px">Jam</th>
+      <th class="tg" style="width:80px">Jenis</th><th>Keterangan</th>
+      <th class="ka" style="width:120px">Masuk (+)</th><th class="ka" style="width:120px">Keluar (−)</th>
+    </tr></thead>
+    <tbody>
+      <tr><td colspan="4" class="t-lembut"><em>Saldo awal periode</em></td>
+          <td class="ka t-lembut" colspan="2"><%= rupiah(k.saldoAwal) %></td></tr>
+      <% if (!k.mutasi.length) { %>
+        <tr><td colspan="6" class="kosong">Tidak ada mutasi kas pada periode ini.</td></tr>
+      <% } %>
+      <% k.mutasi.forEach(m => { %>
+        <tr>
+          <td class="t-lembut"><%= m.tanggal %></td>
+          <td class="tg t-lembut"><small><%= m.jam %></small></td>
+          <td class="tg"><span class="badge <%= m.tipe==='masuk'?'b-hijau':'b-merah' %>"><%= m.tipe %></span></td>
+          <td><%= m.keterangan %> <span class="badge b-abu"><%= m.kategori %></span></td>
+          <td class="ka t-hijau"><%= m.tipe==='masuk' ? rupiah(m.jumlah) : '-' %></td>
+          <td class="ka t-merah"><%= m.tipe==='keluar' ? rupiah(m.jumlah) : '-' %></td>
+        </tr>
+      <% }) %>
+      <tr class="baris-total">
+        <td colspan="4" class="ka">TOTAL MUTASI</td>
+        <td class="ka t-hijau"><%= rupiah(k.masuk) %></td>
+        <td class="ka t-merah"><%= rupiah(k.keluar) %></td>
+      </tr>
+      <tr class="baris-total">
+        <td colspan="4" class="ka">SALDO AKHIR</td>
+        <td colspan="2" class="ka"><%= rupiah(k.saldoAkhir) %></td>
+      </tr>
+    </tbody>
+  </table></div>
+  <p class="petunjuk">Mutasi kas dibuat otomatis dari transaksi penjualan, pembelian tunai, biaya, dan setoran modal.</p>
+</div>
+
+<div class="card no-print" style="border-left:4px solid var(--hijau)">
+  <div class="card-head">
+    <div><h2>💚 Piutang GrabFood</h2><p>Saldo GrabMerchant yang belum masuk kas</p></div>
+    <span class="badge <%= piutang.saldo > 0 ? 'b-kuning' : 'b-abu' %>"><%= rupiah(piutang.saldo) %></span>
+  </div>
+
+  <div class="ringkas">
+    <div class="kotak"><div class="label">Total Penjualan Grab (netto)</div>
+      <div class="nilai"><%= rupiah(piutang.terkumpul) %></div>
+      <div class="ket">setelah komisi platform</div></div>
+    <div class="kotak hijau"><div class="label">Sudah Dicairkan</div>
+      <div class="nilai t-hijau"><%= rupiah(piutang.dicairkan) %></div></div>
+    <div class="kotak kuning"><div class="label">Belum Cair</div>
+      <div class="nilai"><%= rupiah(piutang.saldo) %></div>
+      <div class="ket">tercatat sebagai aset di neraca</div></div>
+  </div>
+
+  <% if (piutang.saldo > 0) { %>
+    <form method="post" action="/kas/pencairan-grab">
+      <div class="baris" style="align-items:flex-end">
+        <div class="grup" style="max-width:150px"><label for="pt">Tanggal Cair</label>
+          <input type="date" id="pt" name="tanggal" class="kontrol" value="<%= hariIni %>"></div>
+        <div class="grup"><label for="pj">Jumlah Dicairkan (Rp)</label>
+          <input type="number" id="pj" name="jumlah" class="kontrol" min="0" step="1000"
+                 max="<%= Math.round(piutang.saldo) %>" value="<%= Math.round(piutang.saldo) %>" required></div>
+        <div class="grup"><label for="pk">Keterangan</label>
+          <input type="text" id="pk" name="keterangan" class="kontrol" value="Pencairan saldo GrabMerchant"></div>
+        <div class="grup" style="max-width:150px">
+          <button class="btn btn-hijau-tua btn-blok">CAIRKAN</button></div>
+      </div>
+    </form>
+  <% } else { %>
+    <p class="kosong">Tidak ada saldo Grab yang menunggu pencairan.</p>
+  <% } %>
+
+  <% if (riwayatCair.length) { %>
+    <div class="judul-seksi" style="color:var(--hijau-teks);border-left-color:var(--hijau)">Riwayat Pencairan</div>
+    <div class="tabel-scroll"><table>
+      <thead><tr><th>Tanggal</th><th>Keterangan</th><th class="ka">Jumlah</th></tr></thead>
+      <tbody><% riwayatCair.forEach(c => { %>
+        <tr><td class="t-lembut"><%= c.tanggal %></td>
+            <td><%= c.keterangan || '-' %></td>
+            <td class="ka t-hijau"><%= rupiah(c.jumlah) %></td></tr>
+      <% }) %></tbody>
+    </table></div>
+  <% } %>
+  <p class="petunjuk">Penjualan lewat Grab tidak langsung menambah kas. Nilainya menumpuk di sini
+     sampai dicairkan, sama seperti saldo GrabMerchant yang sesungguhnya.</p>
+</div>
+
+<div class="baris no-print">
+  <div class="card" style="flex:1; min-width:280px">
+    <div class="card-head"><h2>Catat Biaya Operasional</h2></div>
+    <form method="post" action="/kas/biaya">
+      <div class="baris">
+        <div class="grup" style="max-width:140px"><label for="bt">Tanggal</label>
+          <input type="date" id="bt" name="tanggal" class="kontrol" value="<%= hariIni %>"></div>
+        <div class="grup"><label for="bk">Kategori</label>
+          <select id="bk" name="kategori" class="kontrol">
+            <option>transportasi</option><option>gas & listrik</option><option>kemasan</option>
+            <option>pulsa & internet</option><option>sewa</option><option>gaji</option><option>lain-lain</option>
+          </select></div>
+      </div>
+      <div class="grup"><label for="bket">Keterangan</label>
+        <input type="text" id="bket" name="keterangan" class="kontrol" placeholder="Contoh: Bensin antar pesanan" required></div>
+      <div class="grup"><label for="bj">Jumlah (Rp)</label>
+        <input type="number" id="bj" name="jumlah" class="kontrol" min="0" step="500" required></div>
+      <button class="btn btn-bahaya btn-blok">CATAT BIAYA</button>
+      <p class="petunjuk">Masuk sebagai beban operasional di laporan laba rugi, bukan HPP.</p>
+    </form>
+  </div>
+
+  <div class="card" style="flex:1; min-width:280px">
+    <div class="card-head"><h2>Setoran Modal Pemilik</h2></div>
+    <form method="post" action="/kas/modal">
+      <div class="grup"><label for="mt">Tanggal</label>
+        <input type="date" id="mt" name="tanggal" class="kontrol" value="<%= hariIni %>"></div>
+      <div class="grup"><label for="mket">Keterangan</label>
+        <input type="text" id="mket" name="keterangan" class="kontrol" value="Setoran modal pemilik"></div>
+      <div class="grup"><label for="mj">Jumlah (Rp)</label>
+        <input type="number" id="mj" name="jumlah" class="kontrol" min="0" step="1000" required></div>
+      <button class="btn btn-primer btn-blok">CATAT MODAL</button>
+      <p class="petunjuk">Menambah kas dan ekuitas di neraca. Pakai ini untuk mengisi kas awal usaha.</p>
+    </form>
+  </div>
+</div>
+
+<%- include('partials/bawah') %>

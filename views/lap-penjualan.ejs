@@ -1,0 +1,101 @@
+<%- include('partials/atas') %>
+
+<form method="get" action="/laporan/penjualan" class="card no-print" style="padding:12px">
+  <div class="baris" style="align-items:flex-end">
+    <div class="grup"><label for="dari">Dari</label>
+      <input type="date" id="dari" name="dari" class="kontrol" value="<%= dari %>"></div>
+    <div class="grup"><label for="sampai">Sampai</label>
+      <input type="date" id="sampai" name="sampai" class="kontrol" value="<%= sampai %>"></div>
+    <div class="grup" style="max-width:120px"><button class="btn btn-primer btn-blok">Tampilkan</button></div>
+    <div class="grup" style="max-width:120px"><button type="button" class="btn btn-abu btn-blok" onclick="print()">Cetak PDF</button></div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-head">
+    <div><h2><%= namaUsaha %></h2><p>Laporan Aktivitas Penjualan</p></div>
+    <div class="t-lembut" style="font-size:12px;text-align:right">
+      <strong>Periode</strong><br><%= tglID(l.dari) %><%= l.dari !== l.sampai ? ' – ' + tglID(l.sampai) : '' %>
+    </div>
+  </div>
+
+  <div class="ringkas">
+    <div class="kotak hijau"><div class="label">Total Penjualan (Bruto)</div>
+      <div class="nilai t-hijau"><%= rupiah(l.total.bruto) %></div>
+      <div class="ket"><%= l.total.nota %> nota</div></div>
+    <div class="kotak"><div class="label">Kuantitas Terjual</div>
+      <div class="nilai"><%= angka(l.totalQty) %></div>
+      <div class="ket">porsi</div></div>
+    <div class="kotak ungu"><div class="label">Diterima Bersih</div>
+      <div class="nilai t-biru"><%= rupiah(l.total.netto) %></div>
+      <div class="ket">setelah komisi <%= rupiah(l.total.komisi) %></div></div>
+    <div class="kotak kuning"><div class="label">Menu Terlaris</div>
+      <div class="nilai" style="font-size:14px;padding-top:6px"><%= l.terlaris ? l.terlaris.nama : '-' %></div>
+      <div class="ket"><%= l.terlaris ? angka(l.terlaris.qty) + ' porsi' : '' %></div></div>
+  </div>
+
+  <div class="judul-seksi">Rincian Penjualan per Produk</div>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th class="tg" style="width:44px">No</th><th>Produk</th>
+      <th class="ka">Harga Satuan</th><th class="tg">Terjual</th><th class="ka">Subtotal</th></tr></thead>
+    <tbody>
+      <% if (!l.rincian.length) { %>
+        <tr><td colspan="5" class="kosong">Belum ada penjualan pada periode ini.</td></tr>
+      <% } %>
+      <% l.rincian.forEach((r, i) => { %>
+        <tr>
+          <td class="tg"><%= i+1 %></td>
+          <td><strong><%= r.nama %></strong></td>
+          <td class="ka"><%= rupiah(r.harga) %></td>
+          <td class="tg"><%= angka(r.qty) %></td>
+          <td class="ka"><%= rupiah(r.subtotal) %></td>
+        </tr>
+      <% }) %>
+      <tr class="baris-total">
+        <td colspan="3" class="ka">TOTAL</td>
+        <td class="tg"><%= angka(l.totalQty) %> porsi</td>
+        <td class="ka"><%= rupiah(l.total.bruto) %></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="judul-seksi">Rekap per Kanal Penjualan</div>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th>Kanal</th><th class="tg">Nota</th><th class="ka">Bruto</th>
+      <th class="ka">Komisi Platform</th><th class="ka">Diterima Bersih</th></tr></thead>
+    <tbody>
+      <% if (!l.perKanal.length) { %><tr><td colspan="5" class="kosong">—</td></tr><% } %>
+      <% l.perKanal.forEach(k => { %>
+        <tr>
+          <td><span class="badge <%= k.kanal==='grab'?'b-hijau':(k.kanal==='pesanan'?'b-ungu':'b-biru') %>"><%= k.kanal %></span></td>
+          <td class="tg"><%= k.nota %></td>
+          <td class="ka"><%= rupiah(k.bruto) %></td>
+          <td class="ka t-merah"><%= k.komisi ? '(' + rupiah(k.komisi) + ')' : '-' %></td>
+          <td class="ka t-hijau"><%= rupiah(k.netto) %></td>
+        </tr>
+      <% }) %>
+      <tr class="baris-total">
+        <td colspan="2" class="ka">TOTAL</td>
+        <td class="ka"><%= rupiah(l.total.bruto) %></td>
+        <td class="ka"><%= rupiah(l.total.komisi) %></td>
+        <td class="ka"><%= rupiah(l.total.netto) %></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="judul-seksi">Margin Kotor</div>
+  <div class="tabel-scroll"><table>
+    <tbody>
+      <tr><td>Pendapatan bersih diterima</td><td class="ka"><%= rupiah(l.total.netto) %></td></tr>
+      <tr><td>Harga Pokok Penjualan (HPP)</td><td class="ka t-merah">(<%= rupiah(l.total.hpp) %>)</td></tr>
+      <tr class="baris-total"><td>LABA KOTOR</td>
+        <td class="ka"><%= rupiah(l.total.netto - l.total.hpp) %>
+          <% if (l.total.netto > 0) { %>
+            <span class="t-lembut">(<%= Math.round((l.total.netto - l.total.hpp) / l.total.netto * 100) %>%)</span>
+          <% } %>
+        </td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<%- include('partials/bawah') %>

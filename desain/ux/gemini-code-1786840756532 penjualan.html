@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Mobile - Kasir 3 Alur (Retail, Pesanan, Grab)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f5f7;
+            color: #172b4d;
+            padding: 12px;
+            padding-bottom: 110px;
+        }
+
+        .main-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Navigasi Tab Utama */
+        .tabs-container {
+            display: flex;
+            background: #dfe1e6;
+            padding: 4px;
+            border-radius: 8px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px 6px;
+            font-size: 13px;
+            font-weight: bold;
+            border: none;
+            background: transparent;
+            color: #42526e;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #0052cc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            border-bottom: 2px solid #ebecf0;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            font-size: 15px;
+            color: #172b4d;
+        }
+
+        .badge-tipe {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .bg-retail { background-color: #e3fcef; color: #006644; }
+        .bg-pesanan { background-color: #deebff; color: #0747a6; }
+        .bg-grab { background-color: #eae6ff; color: #403294; }
+
+        /* TAB RETAIL: LIST PRODUK */
+        .product-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #fafbfc;
+            border: 1px solid #dfe1e6;
+            border-radius: 8px;
+        }
+
+        .product-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .product-name { font-size: 14px; font-weight: bold; color: #172b4d; }
+        .product-meta { display: flex; gap: 12px; font-size: 12px; }
+        .product-price { color: #0052cc; font-weight: 600; }
+        .product-stock { color: #ff9900; font-weight: bold; }
+        .stock-out { color: #ff5630; }
+
+        .counter-container {
+            display: flex;
+            align-items: center;
+            border: 1px solid #dfe1e6;
+            border-radius: 6px;
+            overflow: hidden;
+            background: white;
+            width: 120px;
+            height: 36px;
+        }
+
+        .btn-counter {
+            width: 35px;
+            height: 100%;
+            background-color: #f4f5f7;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            color: #42526e;
+            cursor: pointer;
+        }
+
+        .qty-input {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            border: none;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            outline: none;
+        }
+
+        /* TAB PESANAN & GRAB: LIST DATA PEMESAN */
+        .order-list-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .order-select-card {
+            padding: 12px;
+            border: 1px solid #dfe1e6;
+            border-radius: 8px;
+            background-color: #fafbfc;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .order-select-card.selected-pesanan { border: 2px solid #0747a6; background-color: #deebff; }
+        .order-select-card.selected-grab { border: 2px solid #403294; background-color: #eae6ff; }
+
+        .customer-title-row {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 14px;
+            color: #172b4d;
+        }
+
+        .order-select-card.selected-pesanan .customer-title-row { color: #0747a6; }
+        .order-select-card.selected-grab .customer-title-row { color: #403294; }
+
+        .meta-summary { font-size: 12px; color: #5e6c84; margin-top: 4px; }
+
+        /* TABEL DETAIL ITEM DI BAWAH (UNTUK PESANAN & GRAB) */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 6px;
+        }
+
+        th {
+            background-color: #f4f5f7;
+            color: #5e6c84;
+            font-weight: 600;
+            padding: 8px;
+            border-bottom: 2px solid #dfe1e6;
+            text-align: left;
+        }
+
+        td { padding: 10px 8px; border-bottom: 1px solid #ebecf0; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        /* KARTU METODE PEMBAYARAN (HANYA RETAIL & PESANAN) */
+        .payment-options {
+            display: flex;
+            gap: 12px;
+            margin-top: 6px;
+        }
+
+        .pay-label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border: 2px solid #dfe1e6;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            background: #fafbfc;
+        }
+
+        .pay-label.selected-cash { border-color: #0052cc; background-color: #deebff; color: #0747a6; }
+        .pay-label.selected-qris { border-color: #36b37e; background-color: #e3fcef; color: #006644; }
+
+        .cash-calculator-box {
+            background-color: #f4f5f7;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            border: 1px solid #dfe1e6;
+        }
+
+        .form-row { display: flex; gap: 10px; }
+        .form-group { flex: 1; }
+        .form-group label { display: block; font-size: 12px; font-weight: 600; color: #5e6c84; margin-bottom: 4px; }
+        .form-control { width: 100%; padding: 10px; font-size: 14px; border: 1px solid #dfe1e6; border-radius: 6px; background-color: white; outline: none; }
+        .txt-kembalian { font-weight: bold; font-size: 15px; color: #006644; background-color: #e3fcef; border-color: #abf5d1; }
+
+        /* Sticky Bottom Bar */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.07);
+            border-top: 1px solid #e3e6ec;
+            z-index: 100;
+        }
+
+        .total-section { display: flex; flex-direction: column; }
+        .total-label { font-size: 11px; color: #5e6c84; font-weight: bold; }
+        .total-price { font-size: 20px; font-weight: 800; color: #bf2600; }
+        .btn-submit { background-color: #36b37e; color: white; border: none; padding: 12px 24px; font-size: 15px; font-weight: bold; border-radius: 6px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        
+        <div class="tabs-container">
+            <button id="btn-tab-retail" class="tab-btn active" onclick="gantiTab('retail')">🛒 Retail</button>
+            <button id="btn-tab-pesanan" class="tab-btn" onclick="gantiTab('pesanan')">📦 Pesanan PO</button>
+            <button id="btn-tab-grab" class="tab-btn" onclick="gantiTab('grab')">💚 GrabFood</button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2 id="card-main-title">Daftar Menu Produk</h2>
+                <span id="badge-status" class="badge-tipe bg-retail">Retail</span>
+            </div>
+
+            <div class="product-list" id="ui-retail-container">
+                </div>
+
+            <div class="order-list-container" id="ui-pesanan-container" style="display: none;">
+                </div>
+
+            <div class="order-list-container" id="ui-grab-container" style="display: none;">
+                </div>
+        </div>
+
+        <div class="card" id="card-detail-paten" style="display: none;">
+            <div class="card-header">
+                <h2 id="detail-paten-title">Rincian Item Pembelian</h2>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nama Menu Barang</th>
+                        <th class="text-center" style="width: 60px;">Qty</th>
+                        <th class="text-right" style="width: 110px;">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody id="tabel-detail-paten-body">
+                    </tbody>
+            </table>
+        </div>
+
+        <div class="card" id="card-pembayaran">
+            <div class="card-header">
+                <h2>Metode Pembayaran</h2>
+            </div>
+            
+            <div class="payment-options">
+                <label id="lbl-tunai" class="pay-label selected-cash">
+                    <input type="radio" name="metode_bayar" value="TUNAI" checked onchange="handleMetodeBayar('TUNAI')">
+                    💵 TUNAI
+                </label>
+                
+                <label id="lbl-qris" class="pay-label">
+                    <input type="radio" name="metode_bayar" value="QRIS" onchange="handleMetodeBayar('QRIS')">
+                    📱 QRIS
+                </label>
+            </div>
+
+            <div id="box-kalkulator-tunai" class="cash-calculator-box">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="uang_dibayar">Uang Diterima (Rp)</label>
+                        <input type="number" id="uang_dibayar" class="form-control" placeholder="Masukkan nominal uang" oninput="hitungKembalian()">
+                    </div>
+                    <div class="form-group">
+                        <label>Uang Kembalian</label>
+                        <input type="text" id="uang_kembalian" class="form-control txt-kembalian" value="Rp 0" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="bottom-bar">
+        <div class="total-section">
+            <span class="total-label" id="label-items-count">0 Item Terpilih</span>
+            <span class="total-price" id="grand-total">Rp 0</span>
+        </div>
+        <button class="btn-submit" onclick="prosesTransaksiFinal()">PROSES NOTA</button>
+    </div>
+
+    <script>
+        let tabAktif = 'retail';
+        let globalGrandTotal = 0;
+        let metodePembayaranAktif = 'TUNAI';
+        
+        let idPesananTerpilih = null;
+        let idGrabTerpilih = null;
+
+        // Master Data Produk Ritel
+        const masterProduk = [
+            { id: "p1", nama: "Bubur Bayi Beras Merah", hargaRetail: 5000, stok: 42 },
+            { id: "p2", nama: "Bubur Bayi Pisang Susu", hargaRetail: 5000, stok: 15 }
+        ];
+        let qtyRetail = { p1: 0, p2: 0 };
+
+        // Mock Data Daftar Pemesan Pre-Order (PO) -> Pilihan Metode Bayar TETAP ADA
+        const daftarPesananPO = [
+            {
+                idPO: "PO-001",
+                namaPelanggan: "Ibu Linda (Arisan Besok)",
+                totalHarga: 50000,
+                totalQty: 10,
+                items: [
+                    { nama: "Bubur Bayi Beras Merah", qty: 5, subtotal: 25000 },
+                    { nama: "Bubur Bayi Pisang Susu", qty: 5, subtotal: 25000 }
+                ]
+            },
+            {
+                idPO: "PO-002",
+                namaPelanggan: "Bapak Rahmat (Catering Rumah Sakit)",
+                totalHarga: 20000,
+                totalQty: 4,
+                items: [
+                    { nama: "Bubur Bayi Beras Merah", qty: 4, subtotal: 20000 }
+                ]
+            }
+        ];
+
+        // Mock Data Antrean GrabFood -> Pilihan Metode Bayar DIHILANGKAN
+        const antreanGrabFood = [
+            {
+                idGrab: "GRB-9021",
+                namaDriver: "Ahmad Subarjo (Driver Grab)",
+                totalHargaGrab: 17000,
+                totalQty: 3,
+                items: [
+                    { nama: "Bubur Bayi Beras Merah", qty: 2, subtotal: 11000 },
+                    { nama: "Bubur Bayi Pisang Susu", qty: 1, subtotal: 6000 }
+                ]
+            }
+        ];
+
+        // 1. RENDER LIST HALAMAN UTAMA RETAIL
+        function renderRetailList() {
+            const container = document.getElementById('ui-retail-container');
+            container.innerHTML = "";
+            masterProduk.forEach(produk => {
+                let qty = qtyRetail[produk.id];
+                let infoStok = produk.stok <= 0 ? `<span class="product-stock stock-out">Stok Habis</span>` : `<span class="product-stock">Stok: ${produk.stok}</span>`;
+                const div = document.createElement('div');
+                div.className = "product-item";
+                div.innerHTML = `
+                    <div class="product-info">
+                        <span class="product-name">${produk.nama}</span>
+                        <div class="product-meta"><span class="product-price">Rp ${produk.hargaRetail.toLocaleString('id-ID')}</span>${infoStok}</div>
+                    </div>
+                    <div class="counter-container">
+                        <button type="button" class="btn-counter" onclick="ubahQtyRetail('${produk.id}', -1)">-</button>
+                        <input type="number" class="qty-input" id="input-retail-${produk.id}" value="${qty}" min="0" oninput="inputManualRetail('${produk.id}', this.value)">
+                        <button type="button" class="btn-counter" onclick="ubahQtyRetail('${produk.id}', 1)">+</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 2. RENDER LIST DAFTAR NAMA PEMESAN PO
+        function renderPesananPOList() {
+            const container = document.getElementById('ui-pesanan-container');
+            container.innerHTML = "";
+            daftarPesananPO.forEach(order => {
+                let isSelected = order.idPO === idPesananTerpilih ? "selected-pesanan" : "";
+                const div = document.createElement('div');
+                div.className = `order-select-card ${isSelected}`;
+                div.onclick = () => pilihNamaPesananPO(order.idPO);
+                div.innerHTML = `
+                    <div class="customer-title-row"><span>👤 ${order.namaPelanggan}</span><span>${order.idPO}</span></div>
+                    <div class="meta-summary">Total Tagihan: <strong>Rp ${order.totalHarga.toLocaleString('id-ID')}</strong> (${order.totalQty} Item)</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // 3. RENDER LIST TRANSAKSI GRAB
+        function renderGrabList() {
+            const container = document.getElementById('ui-grab-container');
+            container.innerHTML = "";
+            antreanGrabFood.forEach(order => {
+                let isSelected = order.idGrab === idGrabTerpilih ? "selected-grab" : "";
+                const div = document.createElement('div');
+                div.className = `order-select-card ${isSelected}`;
+                div.onclick = () => pilihUserGrab(order.idGrab);
+                div.innerHTML = `
+                    <div class="customer-title-row"><span>💚 ${order.namaDriver}</span><span>${order.idGrab}</span></div>
+                    <div class="meta-summary">Total Aplikasi: <strong>Rp ${order.totalHargaGrab.toLocaleString('id-ID')}</strong> (${order.totalQty} Item)</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // KLIK NAMA DI TAB PESANAN PO
+        function pilihNamaPesananPO(idPO) {
+            idPesananTerpilih = idPO;
+            renderPesananPOList();
+            
+            const data = daftarPesananPO.find(o => o.idPO === idPO);
+            isiTabelRincianPaten(data.items, "Rincian Item Pesanan PO");
+            setBottomBarInfo(data.totalQty, data.totalHarga);
+        }
+
+        // KLIK NAMA DI TAB GRAB
+        function pilihUserGrab(idGrab) {
+            idGrabTerpilih = idGrab;
+            renderGrabList();
+            
+            const data = antreanGrabFood.find(o => o.idGrab === idGrab);
+            isiTabelRincianPaten(data.items, "Rincian Item GrabFood Order");
+            setBottomBarInfo(data.totalQty, data.totalHargaGrab);
+        }
+
+        function isiTabelRincianPaten(items, titleText) {
+            document.getElementById('detail-paten-title').innerText = titleText;
+            const tbody = document.getElementById('tabel-detail-paten-body');
+            tbody.innerHTML = "";
+            items.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>📋 <strong>${item.nama}</strong></td><td class="text-center">${item.qty}</td><td class="text-right">Rp ${item.subtotal.toLocaleString('id-ID')}</td>`;
+                tbody.appendChild(tr);
+            });
+            document.getElementById('card-detail-paten').style.display = 'block';
+        }
+
+        // KONTROLLER PERPINDAHAN TAB
+        function gantiTab(tipe) {
+            tabAktif = tipe;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-tab-${tipe}`).classList.add('active');
+
+            const badge = document.getElementById('badge-status');
+            const title = document.getElementById('card-main-title');
+
+            // Hide all sub-containers first
+            document.getElementById('ui-retail-container').style.display = 'none';
+            document.getElementById('ui-pesanan-container').style.display = 'none';
+            document.getElementById('ui-grab-container').style.display = 'none';
+            document.getElementById('card-detail-paten').style.display = 'none';
+
+            if (tipe === 'retail') {
+                title.innerText = "Daftar Menu Produk";
+                badge.innerText = "Retail"; badge.className = "badge-tipe bg-retail";
+                document.getElementById('ui-retail-container').style.display = 'flex';
+                document.getElementById('card-pembayaran').style.display = 'block'; // Tampilkan Metode Bayar
+                kalkulasiTotalRetail();
+            } else if (tipe === 'pesanan') {
+                title.innerText = "Pilih Nama Pemesan PO";
+                badge.innerText = "Pesanan PO"; badge.className = "badge-tipe bg-pesanan";
+                document.getElementById('ui-pesanan-container').style.display = 'flex';
+                document.getElementById('card-pembayaran').style.display = 'block'; // TETAP TAMPILKAN METODE BAYAR DI SINI
+                if (idPesananTerpilih) { pilihNamaPesananPO(idPesananTerpilih); } else { setBottomBarInfo(0, 0); }
+            } else {
+                title.innerText = "Pilih Antrean User Grab";
+                badge.innerText = "GrabFood"; badge.className = "badge-tipe bg-grab";
+                document.getElementById('ui-grab-container').style.display = 'flex';
+                document.getElementById('card-pembayaran').style.display = 'none'; // EMBUNYIKAN UNTUK GRABFOOD
+                if (idGrabTerpilih) { pilihUserGrab(idGrabTerpilih); } else { setBottomBarInfo(0, 0); }
+            }
+        }
+
+        // Logic Input Counter Retail
+        function ubahQtyRetail(id, perubahan) {
+            const prod = masterProduk.find(p => p.id === id);
+            let target = qtyRetail[id] + perubahan;
+            if (target < 0) target = 0;
+            if (target > prod.stok) { alert("Stok gudang tidak cukup!"); return; }
+            qtyRetail[id] = target;
+            document.getElementById(`input-retail-${id}`).value = target;
+            kalkulasiTotalRetail();
+        }
+
+        function inputManualRetail(id, nilai) {
+            const prod = masterProduk.find(p => p.id === id);
+            let qty = parseInt(nilai) || 0;
+            if (qty < 0) qty = 0;
+            if (qty > prod.stok) { alert("Stok tidak cukup!"); qty = prod.stok; document.getElementById(`input-retail-${id}`).value = qty; }
+            qtyRetail[id] = qty;
+            kalkulasiTotalRetail();
+        }
+
+        function kalkulasiTotalRetail() {
+            if (tabAktif !== 'retail') return;
+            let total = 0, qty = 0;
+            masterProduk.forEach(p => { total += (p.hargaRetail * qtyRetail[p.id]); qty += qtyRetail[p.id]; });
+            setBottomBarInfo(qty, total);
+        }
+
+        function setBottomBarInfo(qty, total) {
+            globalGrandTotal = total;
+            document.getElementById('grand-total').innerText = "Rp " + total.toLocaleString('id-ID');
+            document.getElementById('label-items-count').innerText = `${qty} Item Terpilih`;
+            hitungKembalian();
+        }
+
+        // Pembayaran & Kalkulator
+        function handleMetodeBayar(metode) {
+            metodePembayaranAktif = metode;
+            document.getElementById('lbl-tunai').className = metode === 'TUNAI' ? 'pay-label selected-cash' : 'pay-label';
+            document.getElementById('lbl-qris').className = metode === 'QRIS' ? 'pay-label selected-qris' : 'pay-label';
+            document.getElementById('box-kalkulator-tunai').style.display = metode === 'TUNAI' ? 'block' : 'none';
+            hitungKembalian();
+        }
+
+        function hitungKembalian() {
+            const uangDibayar = parseFloat(document.getElementById('uang_dibayar').value) || 0;
+            const kembalian = uangDibayar - globalGrandTotal;
+            const inputKembalian = document.getElementById('uang_kembalian');
+            if (kembalian < 0) { inputKembalian.value = "Uang Kurang"; inputKembalian.style.color = '#ff5630'; } 
+            else { inputKembalian.value = "Rp " + kembalian.toLocaleString('id-ID'); inputKembalian.style.color = '#006644'; }
+        }
+
+        // PROSES SUBMIT TRANSAKSI AKHIR
+        function prosesTransaksiFinal() {
+            if (globalGrandTotal === 0) { alert("Belum ada data transaksi yang dipilih!"); return; }
+            
+            // Cek Uang Diterima hanya jika tab membutuhkan pembayaran tunai
+            if (tabAktif === 'retail' || tabAktif === 'pesanan') {
+                if (metodePembayaranAktif === 'TUNAI') {
+                    const uangDibayar = parseFloat(document.getElementById('uang_dibayar').value) || 0;
+                    if (uangDibayar < globalGrandTotal) { alert("Gagal Simpan Nota! Nilai uang diterima masih kurang."); return; }
+                }
+            }
+
+            if (tabAktif === 'retail') {
+                alert(`Penjualan RETAIL Sukses!\nMetode: ${metodePembayaranAktif}\nTotal: Rp ${globalGrandTotal.toLocaleString('id-ID')}`);
+                Object.keys(qtyRetail).forEach(k => qtyRetail[k] = 0);
+                renderRetailList();
+            } else if (tabAktif === 'pesanan') {
+                const order = daftarPesananPO.find(o => o.idPO === idPesananTerpilih);
+                alert(`Nota PESANAN PO Berhasil Diselesaikan!\nPemesan: ${order.namaPelanggan}\nMetode Bayar: ${metodePembayaranAktif}\nTotal: Rp ${globalGrandTotal.toLocaleString('id-ID')}`);
+                
+                // Hapus dari antrean list lokal PO
+                const idx = daftarPesananPO.findIndex(o => o.idPO === idPesananTerpilih);
+                if (idx > -1) daftarPesananPO.splice(idx, 1);
+                idPesananTerpilih = null;
+                renderPesananPOList();
+            } else {
+                const order = antreanGrabFood.find(o => o.idGrab === idGrabTerpilih);
+                alert(`Nota GRABFOOD Sukses Berhasil Terbit!\nDriver: ${order.namaDriver}\nTotal: Rp ${globalGrandTotal.toLocaleString('id-ID')}\n\nStatus: Otomatis memotong piutang/saldo GrabMerchant.`);
+                
+                // Hapus dari antrean list lokal Grab
+                const idx = antreanGrabFood.findIndex(o => o.idGrab === idGrabTerpilih);
+                if (idx > -1) antreanGrabFood.splice(idx, 1);
+                idGrabTerpilih = null;
+                renderGrabList();
+            }
+
+            document.getElementById('uang_dibayar').value = "";
+            gantiTab(tabAktif);
+        }
+
+        // Inisialisasi data awal
+        renderRetailList();
+        renderPesananPOList();
+        renderGrabList();
+        kalkulasiTotalRetail();
+    </script>
+</body>
+</html>

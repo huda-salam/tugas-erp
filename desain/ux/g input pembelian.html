@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Mobile - Input Pembelian & Rincian</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f5f7;
+            color: #172b4d;
+            padding: 12px;
+        }
+
+        .main-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            border-bottom: 2px solid #ebecf0;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+
+        .card-header h2 {
+            font-size: 18px;
+            color: #0052cc;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #42526e;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            border: 1px solid #dfe1e6;
+            border-radius: 6px;
+            background-color: #fafbfc;
+            color: #172b4d;
+            outline: none;
+        }
+
+        .form-control:focus {
+            border-color: #0052cc;
+            background-color: white;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        /* Tombol Tambah ke Tabel */
+        .btn-add {
+            width: 100%;
+            background-color: #0052cc;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-add:active { background-color: #0065ff; }
+
+        /* Styling Tabel Rincian */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            min-width: 450px;
+        }
+
+        th {
+            background-color: #f4f5f7;
+            color: #5e6c84;
+            font-weight: 600;
+            padding: 10px;
+            border-bottom: 2px solid #dfe1e6;
+            text-align: left;
+        }
+
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ebecf0;
+        }
+
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: #ff5630;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Baris Total Akuntansi */
+        .total-row {
+            font-weight: bold;
+            background-color: #f4f5f7;
+        }
+        .total-row td {
+            font-size: 15px;
+            color: #bf2600;
+            border-top: 2px solid #172b4d;
+            border-bottom: 4px double #172b4d;
+        }
+
+        /* Tombol Simpan Akhir ke ERP */
+        .btn-submit-erp {
+            width: 100%;
+            background-color: #36b37e;
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(54,179,126,0.2);
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        
+        <div class="card">
+            <div class="card-header">
+                <h2>Input Item Pembelian</h2>
+            </div>
+            
+            <div class="form-group">
+                <label for="vendor">Vendor / Supplier</label>
+                <select id="vendor" class="form-control">
+                    <option value="Sinar Tani Grosir">Sinar Tani Grosir</option>
+                    <option value="Toko Buah Segar">Toko Buah Segar</option>
+                    <option value="CV Kemasan Plastik">CV Kemasan Plastik</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="nama_barang">Nama Bahan / Barang</label>
+                <input type="text" id="nama_barang" class="form-control" placeholder="Contoh: Beras Merah">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="harga_satuan">Harga Satuan (Rp)</label>
+                    <input type="number" id="harga_satuan" class="form-control" placeholder="0">
+                </div>
+                <div class="form-group">
+                    <label for="jumlah">Jumlah / Qty</label>
+                    <input type="number" id="jumlah" class="form-control" placeholder="0">
+                </div>
+            </div>
+
+            <button type="button" class="btn-add" onclick="tambahKeRincian()">+ Tambah ke Daftar</button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Rincian Item Belanja</h2>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Nama Barang</th>
+                            <th class="text-right">Harga</th>
+                            <th class="text-center">Qty</th>
+                            <th class="text-right">Subtotal</th>
+                            <th class="text-center" style="width: 50px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabel-rincian">
+                        <tr id="row-kosong">
+                            <td colspan="5" class="text-center" style="color: #a5adba; padding: 20px;">Belum ada item yang ditambahkan.</td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr class="total-row">
+                            <td colspan="3" class="text-right">GRAND TOTAL:</td>
+                            <td class="text-right" id="grand-total">Rp 0</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <button class="btn-submit-erp" onclick="simpanKeERP()">SIMPAN ALL TRANSAKSI</button>
+        </div>
+
+    </div>
+
+    <script>
+        // Array internal untuk menampung list belanja
+        let daftarBelanja = [];
+
+        function tambahKeRincian() {
+            const barang = document.getElementById('nama_barang').value.trim();
+            const harga = parseFloat(document.getElementById('harga_satuan').value) || 0;
+            const qty = parseFloat(document.getElementById('jumlah').value) || 0;
+
+            // Validasi input wajib terisi
+            if (barang === "" || harga <= 0 || qty <= 0) {
+                alert("Silakan lengkapi nama barang, harga satuan, dan kuantitas dengan benar!");
+                return;
+            }
+
+            // Hitung subtotal item
+            const subtotal = harga * qty;
+
+            // Simpan ke array
+            const itemBaru = { barang, harga, qty, subtotal };
+            daftarBelanja.push(itemBaru);
+
+            // Perbarui visual tabel di layar
+            updateTabel();
+
+            // Reset input barang agar siap ketik item selanjutnya
+            document.getElementById('nama_barang').value = "";
+            document.getElementById('harga_satuan').value = "";
+            document.getElementById('jumlah').value = "";
+            document.getElementById('nama_barang').focus(); // Otomatis kursor aktif di nama barang lagi
+        }
+
+        function hapusItem(index) {
+            // Hapus data dari urutan indeks array
+            daftarBelanja.splice(index, 1);
+            updateTabel();
+        }
+
+        function updateTabel() {
+            const tbody = document.getElementById('tabel-rincian');
+            tbody.innerHTML = ""; // Bersihkan isi tabel lama
+
+            if (daftarBelanja.length === 0) {
+                tbody.innerHTML = `<tr id="row-kosong"><td colspan="5" class="text-center" style="color: #a5adba; padding: 20px;">Belum ada item yang ditambahkan.</td></tr>`;
+                document.getElementById('grand-total').innerText = "Rp 0";
+                return;
+            }
+
+            let totalAkumulasi = 0;
+
+            // Render ulang baris demi baris berdasarkan isi array terkini
+            daftarBelanja.forEach((item, index) => {
+                totalAkumulasi += item.subtotal;
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${item.barang}</strong></td>
+                    <td class="text-right">Rp ${item.harga.toLocaleString('id-ID')}</td>
+                    <td class="text-center">${item.qty}</td>
+                    <td class="text-right">Rp ${item.subtotal.toLocaleString('id-ID')}</td>
+                    <td class="text-center">
+                        <button class="btn-delete" onclick="hapusItem(${index})">❌</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Perbarui teks Grand Total di bagian bawah tabel
+            document.getElementById('grand-total').innerText = "Rp " + totalAkumulasi.toLocaleString('id-ID');
+        }
+
+        function simpanKeERP() {
+            if (daftarBelanja.length === 0) {
+                alert("Gagal! Rincian belanja masih kosong.");
+                return;
+            }
+            const vendor = document.getElementById('vendor').value;
+            const totalBayar = document.getElementById('grand-total').innerText;
+            
+            alert(`Sukses! Berhasil memproses pembelian ke ERP.\n\nVendor: ${vendor}\nJumlah Unsur Barang: ${daftarBelanja.length} Macam\nTotal Nilai Nota: ${totalBayar}`);
+            
+            // Bersihkan data setelah sukses disimpan ke database ERP
+            daftarBelanja = [];
+            updateTabel();
+        }
+    </script>
+</body>
+</html>

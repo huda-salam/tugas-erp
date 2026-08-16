@@ -1,0 +1,34 @@
+{
+  "name": "tugas-erp",
+  "version": "1.0.0",
+  "description": "ERP mini untuk UMKM Bubur Bayi Procil",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seed.js",
+    "seed:demo": "node src/seed.js --demo",
+    "reset": "node src/seed.js --reset --demo",
+    "rebuild": "npm rebuild better-sqlite3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/huda-salam/tugas-erp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/huda-salam/tugas-erp/issues"
+  },
+  "homepage": "https://github.com/huda-salam/tugas-erp#readme",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "ejs": "^6.0.1",
+    "express": "^5.2.1"
+  }
+}

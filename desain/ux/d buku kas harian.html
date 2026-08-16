@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP System - Buku Kas Harian</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f5f7;
+            color: #172b4d;
+            padding: 12px;
+        }
+
+        .cashflow-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* Header Laporan */
+        .report-header {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border-bottom: 2px solid #ebecf0;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+
+        .header-title h1 {
+            font-size: 20px;
+            color: #0052cc;
+        }
+
+        .header-title p {
+            font-size: 13px;
+            color: #5e6c84;
+            margin-top: 2px;
+        }
+
+        .report-date {
+            font-size: 13px;
+            color: #333;
+            background: #f4f5f7;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        /* Summary Cards / Ringkasan Kas */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .summary-card {
+            background: #fafbfc;
+            border: 1px solid #dfe1e6;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 4px solid #0052cc;
+        }
+
+        .summary-card.masuk { border-left-color: #36b37e; }
+        .summary-card.keluar { border-left-color: #ff5630; }
+        .summary-card.saldo { border-left-color: #ffab00; }
+
+        .card-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #5e6c84;
+            font-weight: 600;
+        }
+
+        .card-value {
+            font-size: 16px;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        
+        .txt-masuk { color: #36b37e; }
+        .txt-keluar { color: #ff5630; }
+
+        /* Styling Tabel Kas */
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            border: 1px solid #dfe1e6;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+            min-width: 650px; /* Menjaga struktur kolom di layar kecil */
+        }
+
+        th {
+            background-color: #f4f5f7;
+            color: #5e6c84;
+            font-weight: 600;
+            padding: 10px 12px;
+            border-bottom: 2px solid #dfe1e6;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ebecf0;
+            white-space: nowrap;
+        }
+
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        /* Tanda Status Badge */
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .badge-masuk { background-color: #e3fcef; color: #006644; }
+        .badge-keluar { background-color: #ffebe6; color: #bf2600; }
+
+        .total-row {
+            font-weight: bold;
+            background-color: #f4f5f7;
+        }
+        .total-row td {
+            border-top: 2px solid #dfe1e6;
+            color: #172b4d;
+        }
+
+        /* Tombol Aksi */
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            text-align: center;
+        }
+        .btn-primary { background-color: #0052cc; color: white; }
+        .btn-secondary { background-color: #dfe1e6; color: #42526e; }
+
+        /* Responsivitas Layar Lebar */
+        @media (min-width: 600px) {
+            body { padding: 20px; }
+            .cashflow-container { padding: 30px; }
+            .report-header { flex-direction: row; justify-content: space-between; align-items: center; }
+            .report-date { text-align: right; background: none; padding: 0; }
+            .header-title h1 { font-size: 24px; }
+            .card-value { font-size: 20px; }
+        }
+
+        @media print {
+            body { background-color: white; padding: 0; }
+            .cashflow-container { box-shadow: none; padding: 0; max-width: 100%; }
+            .action-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cashflow-container">
+        <div class="report-header">
+            <div class="header-title">
+                <h1>Buku Kas Harian</h1>
+                <p>Arus Kas Keluar & Masuk Operasional</p>
+            </div>
+            <div class="report-date">
+                <strong>Periode Laporan:</strong> <span id="current-date">31 Mei 2026</span><br>
+                <small style="color: #5e6c84;">Mata Uang: IDR (Rupiah)</small>
+            </div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card masuk">
+                <div class="card-label">Total Kas Masuk</div>
+                <div class="card-value txt-masuk" id="total-masuk">Rp 0</div>
+            </div>
+            <div class="summary-card keluar">
+                <div class="card-label">Total Kas Keluar</div>
+                <div class="card-value txt-keluar" id="total-keluar">Rp 0</div>
+            </div>
+            <div class="summary-card saldo">
+                <div class="card-label">Saldo Akhir Hari Ini</div>
+                <div class="card-value" id="saldo-akhir" style="color: #0052cc;">Rp 0</div>
+            </div>
+        </div>
+
+        <div class="section-title">Log Mutasi Kas</div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 70px;" class="text-center">Waktu</th>
+                        <th style="width: 100px;" class="text-center">Jenis</th>
+                        <th>Keterangan / Deskripsi Aktivitas</th>
+                        <th class="text-right" style="width: 130px;">Kas Masuk (+)</th>
+                        <th class="text-right" style="width: 130px;">Kas Keluar (-)</th>
+                    </tr>
+                </thead>
+                <tbody id="cash-mutations">
+                    <tr>
+                        <td class="text-center"><small>07:30</small></td>
+                        <td class="text-center"><span class="badge badge-masuk">Masuk</span></td>
+                        <td>Saldo awal harian (Kas di tangan)</td>
+                        <td class="text-right txt-masuk">Rp 100.000</td>
+                        <td class="text-right txt-keluar">-</td>
+                    </tr>
+                    <tr>
+                        <td class="text-center"><small>08:15</small></td>
+                        <td class="text-center"><span class="badge badge-keluar">Keluar</span></td>
+                        <td>Belanja bahan baku (Beras merah & Pisang)</td>
+                        <td class="text-right txt-masuk">-</td>
+                        <td class="text-right txt-keluar">Rp 45.000</td>
+                    </tr>
+                    <tr>
+                        <td class="text-center"><small>12:00</small></td>
+                        <td class="text-center"><span class="badge badge-masuk">Masuk</span></td>
+                        <td>Penjualan sesi pagi (42 porsi Beras Merah)</td>
+                        <td class="text-right txt-masuk">Rp 210.000</td>
+                        <td class="text-right txt-keluar">-</td>
+                    </tr>
+                    <tr>
+                        <td class="text-center"><small>14:00</small></td>
+                        <td class="text-center"><span class="badge badge-keluar">Keluar</span></td>
+                        <td>Beli cup/kemasan plastik tambahan</td>
+                        <td class="text-right txt-masuk">-</td>
+                        <td class="text-right txt-keluar">Rp 15.000</td>
+                    </tr>
+                    <tr>
+                        <td class="text-center"><small>17:00</small></td>
+                        <td class="text-center"><span class="badge badge-masuk">Masuk</span></td>
+                        <td>Penjualan sesi sore (32 porsi Pisang Susu)</td>
+                        <td class="text-right txt-masuk">Rp 160.000</td>
+                        <td class="text-right txt-keluar">-</td>
+                    </tr>
+                    
+                    <tr class="total-row">
+                        <td colspan="3" class="text-right">TOTAL MUTASI:</td>
+                        <td class="text-right txt-masuk" id="row-total-masuk">Rp 0</td>
+                        <td class="text-right txt-keluar" id="row-total-keluar">Rp 0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn btn-secondary" onclick="window.print()">Cetak Buku Kas</button>
+            <button class="btn btn-primary" onclick="alert('Sinkronisasi data kas ke Jurnal Umum Akuntansi sukses!')">Selesai & Tutup Buku</button>
+        </div>
+    </div>
+
+    <script>
+        // Data internal mutasi (Representasi dari database/ERP)
+        const mutasiKas = [
+            { tipe: 'masuk', jumlah: 100000 },
+            { tipe: 'keluar', jumlah: 45000 },
+            { tipe: 'masuk', jumlah: 210000 },
+            { tipe: 'keluar', jumlah: 15000 },
+            { tipe: 'masuk', jumlah: 160000 }
+        ];
+
+        function hitungBukuKas() {
+            let totalMasuk = 0;
+            let totalKeluar = 0;
+
+            mutasiKas.forEach(item => {
+                if(item.tipe === 'masuk') totalMasuk += item.jumlah;
+                if(item.tipe === 'keluar') totalKeluar += item.jumlah;
+            });
+
+            let saldoAkhir = totalMasuk - totalKeluar;
+
+            // Render ke Widget Atas
+            document.getElementById('total-masuk').innerText = "Rp " + totalMasuk.toLocaleString('id-ID');
+            document.getElementById('total-keluar').innerText = "Rp " + totalKeluar.toLocaleString('id-ID');
+            document.getElementById('saldo-akhir').innerText = "Rp " + saldoAkhir.toLocaleString('id-ID');
+
+            // Render ke Baris Bawah Tabel
+            document.getElementById('row-total-masuk').innerText = "Rp " + totalMasuk.toLocaleString('id-ID');
+            document.getElementById('row-total-keluar').innerText = "Rp " + totalKeluar.toLocaleString('id-ID');
+        }
+
+        // Set Tanggal Otomatis Hari Ini
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', options);
+
+        // Jalankan fungsi hitung saat halaman dimuat
+        hitungBukuKas();
+    </script>
+</body>
+</html>

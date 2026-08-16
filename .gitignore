@@ -1,0 +1,14 @@
+node_modules/
+
+# Database lokal — JANGAN di-commit.
+# File SQLite itu biner, Git tidak bisa merge-nya. Kalau dua orang sama-sama
+# input transaksi lalu push, yang terjadi bukan gabungan tapi saling timpa.
+# Tiap anggota pakai DB sendiri; untuk data seragam jalankan `npm run seed:demo`.
+data/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+.env
+.DS_Store
+npm-debug.log*

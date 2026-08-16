@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP Mobile - Kasir Cepat dengan Stok</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f5f7;
+            color: #172b4d;
+            padding: 12px;
+            padding-bottom: 110px; /* Ruang agar tidak tertutup sticky bar bawah */
+        }
+
+        .main-wrapper {
+            max-width: 600px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Navigasi Tab Tipe Penjualan */
+        .tabs-container {
+            display: flex;
+            background: #dfe1e6;
+            padding: 4px;
+            border-radius: 8px;
+            gap: 4px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            border: none;
+            background: transparent;
+            color: #42526e;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            background: white;
+            color: #0052cc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            border-bottom: 2px solid #ebecf0;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-header h2 {
+            font-size: 16px;
+            color: #172b4d;
+        }
+
+        .badge-tipe {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .bg-retail { background-color: #e3fcef; color: #006644; }
+        .bg-pesanan { background-color: #deebff; color: #0747a6; }
+        .bg-grab { background-color: #eae6ff; color: #403294; }
+
+        /* LIST PRODUK */
+        .product-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .product-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: #fafbfc;
+            border: 1px solid #dfe1e6;
+            border-radius: 8px;
+        }
+
+        .product-info {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .product-name {
+            font-size: 14px;
+            font-weight: bold;
+            color: #172b4d;
+        }
+
+        .product-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+        }
+
+        .product-price {
+            color: #0052cc;
+            font-weight: 600;
+        }
+
+        /* Badge Indikator Sisa Stok */
+        .product-stock {
+            color: #ff9900;
+            font-weight: bold;
+        }
+        .stock-out {
+            color: #ff5630;
+        }
+
+        /* Komponen Counter Tambah Kurang (+ / -) */
+        .counter-container {
+            display: flex;
+            align-items: center;
+            border: 1px solid #dfe1e6;
+            border-radius: 6px;
+            overflow: hidden;
+            background: white;
+            width: 120px;
+            height: 36px;
+        }
+
+        .btn-counter {
+            width: 35px;
+            height: 100%;
+            background-color: #f4f5f7;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            color: #42526e;
+            cursor: pointer;
+        }
+
+        .btn-counter:active {
+            background-color: #dfe1e6;
+        }
+
+        .qty-input {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            border: none;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #172b4d;
+            background: transparent;
+            outline: none;
+            -moz-appearance: textfield;
+        }
+        .qty-input::-webkit-outer-spin-button,
+        .qty-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Opsi Pembayaran */
+        .payment-options {
+            display: flex;
+            gap: 12px;
+            margin-top: 6px;
+        }
+
+        .pay-label {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border: 2px solid #dfe1e6;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            background: #fafbfc;
+        }
+
+        .pay-label.selected-cash {
+            border-color: #0052cc;
+            background-color: #deebff;
+            color: #0747a6;
+        }
+
+        .pay-label.selected-qris {
+            border-color: #36b37e;
+            background-color: #e3fcef;
+            color: #006644;
+        }
+
+        .cash-calculator-box {
+            background-color: #f4f5f7;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 12px;
+            border: 1px solid #dfe1e6;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-group {
+            flex: 1;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #5e6c84;
+            margin-bottom: 4px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #dfe1e6;
+            border-radius: 6px;
+            background-color: white;
+            outline: none;
+        }
+
+        .txt-kembalian {
+            font-weight: bold;
+            font-size: 15px;
+            color: #006644;
+            background-color: #e3fcef;
+            border-color: #abf5d1;
+        }
+
+        /* Sticky Bottom Bar */
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -4px 10px rgba(0,0,0,0.07);
+            border-top: 1px solid #e3e6ec;
+            z-index: 100;
+        }
+
+        .total-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .total-label {
+            font-size: 11px;
+            color: #5e6c84;
+            font-weight: bold;
+        }
+
+        .total-price {
+            font-size: 20px;
+            font-weight: 800;
+            color: #bf2600;
+        }
+
+        .btn-submit {
+            background-color: #36b37e;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        
+        <div class="tabs-container">
+            <button id="btn-tab-retail" class="tab-btn active" onclick="gantiTab('retail')">🛒 Retail</button>
+            <button id="btn-tab-pesanan" class="tab-btn" onclick="gantiTab('pesanan')">📦 Pesanan</button>
+            <button id="btn-tab-grab" class="tab-btn" onclick="gantiTab('grab')">💚 GrabFood</button>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Daftar Menu Produk</h2>
+                <span id="badge-status" class="badge-tipe bg-retail">Retail</span>
+            </div>
+
+            <div class="product-list" id="daftar-produk-container">
+                </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h2>Metode Pembayaran</h2>
+            </div>
+            
+            <div class="payment-options">
+                <label id="lbl-tunai" class="pay-label selected-cash">
+                    <input type="radio" name="metode_bayar" value="TUNAI" checked onchange="handleMetodeBayar('TUNAI')">
+                    💵 TUNAI
+                </label>
+                
+                <label id="lbl-qris" class="pay-label">
+                    <input type="radio" name="metode_bayar" value="QRIS" onchange="handleMetodeBayar('QRIS')">
+                    📱 QRIS
+                </label>
+            </div>
+
+            <div id="box-kalkulator-tunai" class="cash-calculator-box">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="uang_dibayar">Uang Diterima (Rp)</label>
+                        <input type="number" id="uang_dibayar" class="form-control" placeholder="Masukkan nominal uang" oninput="hitungKembalian()">
+                    </div>
+                    <div class="form-group">
+                        <label>Uang Kembalian</label>
+                        <input type="text" id="uang_kembalian" class="form-control txt-kembalian" value="Rp 0" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="bottom-bar">
+        <div class="total-section">
+            <span class="total-label" id="label-items-count">0 Item Terpilih</span>
+            <span class="total-price" id="grand-total">Rp 0</span>
+        </div>
+        <button class="btn-submit" onclick="prosesTransaksiFinal()">PROSES NOTA</button>
+    </div>
+
+    <script>
+        let tabAktif = 'retail';
+        let globalGrandTotal = 0;
+        let metodePembayaranAktif = 'TUNAI';
+
+        // Master Data Produk Lengkap dengan Variabel Stok Aktual Gudang
+        const masterProduk = [
+            { id: "p1", nama: "Bubur Bayi Beras Merah", hargaRetail: 5000, hargaGrab: 6000, stok: 42 },
+            { id: "p2", nama: "Bubur Bayi Pisang Susu", hargaRetail: 5000, hargaGrab: 6000, stok: 15 },
+            { id: "p3", nama: "Puree Wortel Organik", hargaRetail: 5000, hargaGrab: 6000, stok: 0 }
+        ];
+
+        // Status jumlah belanja saat ini { id_produk: kuantitas }
+        let keranjangJumlah = {
+            p1: 0,
+            p2: 0,
+            p3: 0
+        };
+
+        // Render List Semua Produk Beserta Stoknya
+        function renderProdukList() {
+            const container = document.getElementById('daftar-produk-container');
+            container.innerHTML = "";
+
+            masterProduk.forEach(produk => {
+                let hargaSekarang = (tabAktif === 'grab') ? produk.hargaGrab : staticHarga(produk);
+                let qtySekarang = keranjangJumlah[produk.id];
+
+                // Membuat text indikator stok
+                let infoStokHTML = `<span class="product-stock">Stok: ${produk.stok}</span>`;
+                if (produk.stok <= 0) {
+                    infoStokHTML = `<span class="product-stock stock-out">Stok Habis</span>`;
+                }
+
+                const itemDiv = document.createElement('div');
+                itemDiv.className = "product-item";
+                itemDiv.innerHTML = `
+                    <div class="product-info">
+                        <span class="product-name">${produk.nama}</span>
+                        <div class="product-meta">
+                            <span class="product-price">Rp ${hargaSekarang.toLocaleString('id-ID')}</span>
+                            ${infoStokHTML}
+                        </div>
+                    </div>
+                    <div class="counter-container">
+                        <button type="button" class="btn-counter" onclick="ubahQty('${produk.id}', -1)">-</button>
+                        <input type="number" class="qty-input" id="input-qty-${produk.id}" value="${qtySekarang}" min="0" oninput="inputManualQty('${produk.id}', this.value)">
+                        <button type="button" class="btn-counter" onclick="ubahQty('${produk.id}', 1)">+</button>
+                    </div>
+                `;
+                container.appendChild(itemDiv);
+            });
+        }
+
+        // Penanganan Fallback Harga Custom / Retail
+        function staticHarga(produk) {
+            return produk.hargaRetail;
+        }
+
+        function gantiTab(tipe) {
+            tabAktif = tipe;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-tab-${tipe}`).classList.add('active');
+
+            const badge = document.getElementById('badge-status');
+            badge.className = "badge-tipe";
+            
+            if (tipe === 'retail') {
+                badge.innerText = "Retail"; badge.classList.add('bg-retail');
+            } else if (tipe === 'pesanan') {
+                badge.innerText = "Pesanan"; badge.classList.add('bg-pesanan');
+            } else if (tipe === 'grab') {
+                badge.innerText = "GrabFood"; badge.classList.add('bg-grab');
+            }
+            
+            renderProdukList();
+            kalkulasiTotalNota();
+        }
+
+        // Ubah Qty dengan Validasi Sisa Stok Gudang
+        function ubahQty(id, perubahan) {
+            const dataBarang = masterProduk.find(p => p.id === id);
+            let qty = keranjangJumlah[id] + perubahan;
+            
+            if (qty < 0) qty = 0;
+            
+            // Validasi: Tidak boleh melebihi stok yang ada
+            if (qty > dataBarang.stok) {
+                alert(`Stok tidak mencukupi! Sisa stok untuk ${dataBarang.nama} hanya ${dataBarang.stok} porsi.`);
+                return;
+            }
+            
+            keranjangJumlah[id] = qty;
+            document.getElementById(`input-qty-${id}`).value = qty;
+            
+            kalkulasiTotalNota();
+        }
+
+        // Input manual via keyboard HP dengan Validasi Sisa Stok
+        function inputManualQty(id, nilai) {
+            const dataBarang = masterProduk.find(p => p.id === id);
+            let qty = parseInt(nilai) || 0;
+            
+            if (qty < 0) qty = 0;
+            
+            if (qty > dataBarang.stok) {
+                alert(`Stok tidak mencukupi! Sisa stok hanya ${dataBarang.stok} porsi.`);
+                qty = dataBarang.stok; // paksa set ke batas maksimal stok
+                document.getElementById(`input-qty-${id}`).value = qty;
+            }
+            
+            keranjangJumlah[id] = qty;
+            kalkulasiTotalNota();
+        }
+
+        function kalkulasiTotalNota() {
+            let totalNota = 0;
+            let totalQtyItem = 0;
+
+            masterProduk.forEach(produk => {
+                let harga = (tabAktif === 'grab') ? produk.hargaGrab : produk.hargaRetail;
+                let qty = keranjangJumlah[produk.id];
+
+                totalNota += (harga * qty);
+                totalQtyItem += qty;
+            });
+
+            globalGrandTotal = totalNota;
+            document.getElementById('grand-total').innerText = "Rp " + totalNota.toLocaleString('id-ID');
+            document.getElementById('label-items-count').innerText = `${totalQtyItem} Item Terpilih`;
+            
+            hitungKembalian();
+        }
+
+        function handleMetodeBayar(metode) {
+            metodePembayaranAktif = metode;
+            const lblTunai = document.getElementById('lbl-tunai');
+            const lblQris = document.getElementById('lbl-qris');
+            const boxKalkulator = document.getElementById('box-kalkulator-tunai');
+
+            if (metode === 'TUNAI') {
+                lblTunai.classList.add('selected-cash');
+                lblQris.classList.remove('selected-qris');
+                boxKalkulator.style.display = 'block';
+                hitungKembalian();
+            } else {
+                lblQris.classList.add('selected-qris');
+                lblTunai.classList.remove('selected-cash');
+                boxKalkulator.style.display = 'none';
+            }
+        }
+
+        function hitungKembalian() {
+            const uangDibayar = parseFloat(document.getElementById('uang_dibayar').value) || 0;
+            const kembalian = uangDibayar - globalGrandTotal;
+            const inputKembalian = document.getElementById('uang_kembalian');
+
+            if (kembalian < 0) {
+                inputKembalian.value = "Uang Kurang";
+                inputKembalian.style.color = '#ff5630';
+            } else {
+                inputKembalian.value = "Rp " + kembalian.toLocaleString('id-ID');
+                inputKembalian.style.color = '#006644';
+            }
+        }
+
+        function prosesTransaksiFinal() {
+            if (globalGrandTotal === 0) { alert("Belum ada barang yang dipilih!"); return; }
+            
+            if (metodePembayaranAktif === 'TUNAI') {
+                const uangDibayar = parseFloat(document.getElementById('uang_dibayar').value) || 0;
+                if (uangDibayar < globalGrandTotal) {
+                    alert("Gagal memproses nota! Uang yang dibayarkan konsumen masih kurang.");
+                    return;
+                }
+            }
+            
+            let barangDibeli = [];
+            masterProduk.forEach(p => {
+                if(keranjangJumlah[p.id] > 0){
+                    barangDibeli.push(`${p.nama} (${keranjangJumlah[p.id]}x)`);
+                    p.stok -= keranjangJumlah[p.id]; // Potong array stok lokal secara realtime
+                }
+            });
+
+            alert(`TRANSAKSI BERHASIL!\n\nMetode: ${metodePembayaranAktif}\nTotal Nota: Rp ${globalGrandTotal.toLocaleString('id-ID')}\n\nStok gudang utama telah diperbarui.`);
+            
+            // Reset state belanjaan
+            Object.keys(keranjangJumlah).forEach(key => keranjangJumlah[key] = 0);
+            document.getElementById('uang_dibayar').value = "";
+            renderProdukList(); // Render ulang agar info angka sisa stok baru langsung tampil
+            kalkulasiTotalNota();
+        }
+
+        renderProdukList();
+        kalkulasiTotalNota();
+    </script>
+</body>
+</html>

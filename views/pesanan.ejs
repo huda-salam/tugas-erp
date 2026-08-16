@@ -1,0 +1,176 @@
+<%- include('partials/atas') %>
+
+<form method="post" action="/pesanan" id="form-pesan">
+<div class="card">
+  <div class="card-head"><h2>📋 Input Pesanan Masuk</h2>
+    <span class="badge-tipe bg-pesanan" id="badge-kanal">Pesanan PO</span></div>
+
+  <div class="baris">
+    <div class="grup" style="max-width:200px">
+      <label for="kanal">Asal Pesanan</label>
+      <select id="kanal" name="kanal" class="kontrol" onchange="gantiKanal()">
+        <option value="pesanan">📦 Pesanan PO (langsung)</option>
+        <option value="grab">💚 Order GrabFood</option>
+      </select>
+    </div>
+    <div class="grup" id="grup-pelanggan">
+      <label for="pelanggan_id">Pemesan</label>
+      <select id="pelanggan_id" name="pelanggan_id" class="kontrol">
+        <option value="">— pelanggan umum —</option>
+        <% pelanggan.forEach(p => { %><option value="<%= p.id %>"><%= p.nama %></option><% }) %>
+      </select>
+      <div class="petunjuk">Tambah nama baru di <a href="/master?tab=mitra" class="t-biru">Master Data</a></div>
+    </div>
+    <div class="grup" id="grup-ref" style="display:none">
+      <label for="ref_luar">Nomor Order / Driver Grab</label>
+      <input type="text" id="ref_luar" name="ref_luar" class="kontrol" placeholder="Contoh: GRB-9021 · Ahmad">
+    </div>
+  </div>
+
+  <div class="baris">
+    <div class="grup" style="max-width:180px">
+      <label for="tanggal">Tanggal Pesan</label>
+      <input type="date" id="tanggal" name="tanggal" class="kontrol" value="<%= hariIni %>" required>
+    </div>
+    <div class="grup" style="max-width:180px" id="grup-kirim">
+      <label for="tanggal_kirim">Tanggal Kirim</label>
+      <input type="date" id="tanggal_kirim" name="tanggal_kirim" class="kontrol" value="<%= hariIni %>">
+    </div>
+    <div class="grup">
+      <label for="catatan">Catatan</label>
+      <input type="text" id="catatan" name="catatan" class="kontrol" placeholder="Contoh: tanpa gula, antar jam 7 pagi">
+    </div>
+  </div>
+
+  <div class="judul-seksi">Produk Dipesan</div>
+  <% if (!produk.length) { %>
+    <p class="kosong">Belum ada produk. Tambahkan di <a href="/master" class="t-biru">Master Data</a>.</p>
+  <% } %>
+  <div class="product-list">
+    <% produk.forEach(p => { %>
+      <div class="product-item">
+        <div class="product-info">
+          <span class="product-name"><%= p.nama %></span>
+          <div class="product-meta">
+            <span class="product-price" id="hrg<%= p.id %>"><%= rupiah(p.h_pesanan) %></span>
+            <span class="t-lembut">stok kini: <%= angka(p.stok) %> <%= p.satuan %></span>
+            <span class="t-biru" id="sub<%= p.id %>">Rp 0</span>
+          </div>
+        </div>
+        <div class="counter-container">
+          <button type="button" class="btn-counter" onclick="ubah(<%= p.id %>,-1)">−</button>
+          <input type="number" class="qty-input" id="q<%= p.id %>" value="0" min="0"
+                 oninput="hitung()" data-id="<%= p.id %>"
+                 data-pesanan="<%= p.h_pesanan %>" data-grab="<%= p.h_grab %>">
+          <button type="button" class="btn-counter" onclick="ubah(<%= p.id %>,1)">+</button>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <div class="baris" style="align-items:center;margin-top:16px">
+    <div class="grup">
+      <div class="label" style="font-size:11px;color:var(--teks-lembut);font-weight:600">TOTAL PESANAN</div>
+      <div style="font-size:22px;font-weight:800;color:var(--merah-tua)" id="total">Rp 0</div>
+      <div class="petunjuk" id="info-item">0 item</div>
+    </div>
+    <button type="submit" class="btn btn-sukses" style="min-width:170px">SIMPAN PESANAN</button>
+  </div>
+  <p class="petunjuk">Pesanan belum memotong stok. Stok berkurang saat diproses di menu Kasir
+     pada tab yang sesuai dengan asal pesanannya.</p>
+</div>
+</form>
+
+<div class="card">
+  <div class="card-head"><h2>Daftar Pesanan</h2></div>
+  <% if (!daftar.length) { %><p class="kosong">Belum ada pesanan.</p><% } else { %>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th>No.</th><th>Asal</th><th>Pemesan</th><th>Kirim</th><th>Isi</th>
+      <th class="ka">Total</th><th class="tg">Status</th><th></th></tr></thead>
+    <tbody><% daftar.forEach(p => { %>
+      <tr>
+        <td class="mono"><%= p.no_pesanan %></td>
+        <td><span class="badge <%= p.kanal==='grab'?'b-ungu':'b-biru' %>">
+          <%= p.kanal==='grab' ? 'GrabFood' : 'PO' %></span></td>
+        <td><strong><%= p.kanal==='grab' && p.ref_luar ? p.ref_luar : p.pelanggan %></strong></td>
+        <td class="t-lembut"><%= p.tanggal_kirim || '-' %></td>
+        <td class="t-lembut" style="max-width:220px"><%= p.isi || '-' %></td>
+        <td class="ka"><%= rupiah(p.total) %></td>
+        <td class="tg"><span class="badge <%= p.status==='selesai'?'b-hijau':(p.status==='batal'?'b-merah':'b-kuning') %>"><%= p.status %></span></td>
+        <td class="tg no-print">
+          <% if (p.status === 'baru') { %>
+            <a href="/kasir?kanal=<%= p.kanal %>" class="btn btn-kecil btn-primer">Proses</a>
+            <form method="post" action="/pesanan/<%= p.id %>/batal" style="display:inline"
+                  onsubmit="return confirm('Batalkan pesanan <%= p.no_pesanan %>?')">
+              <button class="btn-hapus" title="Batalkan">✕</button>
+            </form>
+          <% } %>
+        </td>
+      </tr>
+    <% }) %></tbody>
+  </table></div>
+  <% } %>
+</div>
+
+<script>
+const rp = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+const inputs = () => [...document.querySelectorAll('.qty-input')];
+
+// Harga mengikuti asal pesanan: PO pakai harga pesanan, Grab pakai harga GrabFood
+function hargaAktif(el) {
+  return parseFloat(document.getElementById('kanal').value === 'grab' ? el.dataset.grab : el.dataset.pesanan) || 0;
+}
+
+function gantiKanal() {
+  const grab = document.getElementById('kanal').value === 'grab';
+  const badge = document.getElementById('badge-kanal');
+  badge.innerText = grab ? 'GrabFood' : 'Pesanan PO';
+  badge.className = 'badge-tipe ' + (grab ? 'bg-grab' : 'bg-pesanan');
+  document.getElementById('grup-ref').style.display = grab ? 'block' : 'none';
+  document.getElementById('grup-pelanggan').style.display = grab ? 'none' : 'block';
+  document.getElementById('grup-kirim').style.display = grab ? 'none' : 'block';
+  inputs().forEach(el => document.getElementById('hrg' + el.dataset.id).innerText = rp(hargaAktif(el)));
+  hitung();
+}
+
+function ubah(id, d) {
+  const el = document.getElementById('q' + id);
+  el.value = Math.max(0, (parseInt(el.value) || 0) + d);
+  hitung();
+}
+
+function hitung() {
+  let total = 0, qty = 0;
+  inputs().forEach(el => {
+    const q = Math.max(0, parseInt(el.value) || 0);
+    const sub = q * hargaAktif(el);
+    document.getElementById('sub' + el.dataset.id).innerText = rp(sub);
+    total += sub; qty += q;
+  });
+  document.getElementById('total').innerText = rp(total);
+  document.getElementById('info-item').innerText = qty + ' item';
+  return total;
+}
+
+document.getElementById('form-pesan').addEventListener('submit', function (e) {
+  if (hitung() <= 0) { e.preventDefault(); alert('Belum ada produk yang dipesan.'); return; }
+
+  this.querySelectorAll('.baris-item').forEach(el => el.remove());
+  let i = 0;
+  inputs().forEach(el => {
+    const q = parseInt(el.value) || 0;
+    if (q <= 0) return;
+    Object.entries({ produk_id: el.dataset.id, qty: q, harga: hargaAktif(el) }).forEach(([k, v]) => {
+      const h = document.createElement('input');
+      h.type = 'hidden'; h.className = 'baris-item';
+      h.name = `items[${i}][${k}]`; h.value = v;
+      this.appendChild(h);
+    });
+    i++;
+  });
+});
+
+gantiKanal();
+</script>
+
+<%- include('partials/bawah') %>

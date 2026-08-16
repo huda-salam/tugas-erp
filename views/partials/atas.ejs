@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= judul %> · <%= namaUsaha %></title>
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body class="<%= typeof adaBar !== 'undefined' && adaBar ? 'ada-bar' : '' %>">
+
+<nav class="nav">
+  <a href="/"          class="<%= jalur === '/' ? 'on' : '' %>"><i>🏠</i>Beranda</a>
+  <a href="/kasir"     class="<%= jalur.startsWith('/kasir') ? 'on' : '' %>"><i>🧾</i>Kasir</a>
+  <a href="/pesanan"   class="<%= jalur.startsWith('/pesanan') ? 'on' : '' %>"><i>📋</i>Pesanan</a>
+  <a href="/pembelian" class="<%= jalur.startsWith('/pembelian') ? 'on' : '' %>"><i>🛒</i>Pembelian</a>
+  <a href="/produksi"  class="<%= jalur.startsWith('/produksi') ? 'on' : '' %>"><i>🍲</i>Produksi</a>
+  <a href="/inventory" class="<%= jalur.startsWith('/inventory') ? 'on' : '' %>"><i>📦</i>Stok</a>
+  <a href="/kas"       class="<%= jalur.startsWith('/kas') ? 'on' : '' %>"><i>💵</i>Kas</a>
+  <a href="/laporan/penjualan"           class="<%= jalur === '/laporan/penjualan' ? 'on' : '' %>"><i>📈</i>Lap. Jual</a>
+  <a href="/laporan/pembelian-produksi"  class="<%= jalur === '/laporan/pembelian-produksi' ? 'on' : '' %>"><i>🏭</i>Lap. Produksi</a>
+  <a href="/laporan/keuangan"            class="<%= jalur === '/laporan/keuangan' ? 'on' : '' %>"><i>📊</i>Keuangan</a>
+  <a href="/master"    class="<%= jalur.startsWith('/master') ? 'on' : '' %>"><i>⚙️</i>Master</a>
+</nav>
+
+<header class="topbar">
+  <div>
+    <h1><%= judul %></h1>
+    <div class="sub"><%= namaUsaha %> · <%= tglID(hariIni) %></div>
+  </div>
+  <div class="kas">Saldo Kas<b><%= rupiah(saldoKas) %></b></div>
+</header>
+
+<main class="wrap">
+<% if (ok) { %><div class="pesan pesan-ok">✅ <%= ok %></div><% } %>
+<% if (err) { %><div class="pesan pesan-galat">⚠️ <%= err %></div><% } %>

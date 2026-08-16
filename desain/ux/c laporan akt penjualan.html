@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERP System - Laporan Penjualan Hari Ini</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #f4f5f7;
+            color: #172b4d;
+            padding: 12px; /* Diperkecil agar ramah layar HP */
+        }
+
+        .report-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 16px; /* Padding dinamis */
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        /* Header Laporan */
+        .report-header {
+            display: flex;
+            flex-direction: column; /* Default bertumpuk di HP agar muat */
+            gap: 12px;
+            border-bottom: 2px solid #ebecf0;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+
+        .company-title h1 {
+            font-size: 20px;
+            color: #0052cc;
+        }
+
+        .company-title p {
+            font-size: 13px;
+            color: #5e6c84;
+            margin-top: 2px;
+        }
+
+        .report-date {
+            text-align: left; /* Rata kiri di HP agar tidak berantakan */
+            font-size: 13px;
+            color: #333;
+            background: #f4f5f7;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        /* Ringkasan Kartu / Dashboard Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Mengecil otomatis */
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        .metric-card {
+            background: #fafbfc;
+            border: 1px solid #dfe1e6;
+            border-radius: 8px;
+            padding: 12px;
+            border-left: 4px solid #0052cc;
+        }
+
+        .metric-card.success { border-left-color: #36b37e; }
+        .metric-card.warning { border-left-color: #ffab00; }
+
+        .metric-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #5e6c84;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 700;
+            margin-top: 4px;
+            color: #172b4d;
+        }
+
+        /* KUNCI PERBAIKAN TABEL UTUH (RESPONSIVE) */
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #172b4d;
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto; /* Memunculkan scrollbar horizontal internal jika layar terlalu sempit */
+            -webkit-overflow-scrolling: touch; /* Geser halus di iOS/Android */
+            border: 1px solid #dfe1e6;
+            border-radius: 8px;
+            background: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+            min-width: 500px; /* Memaksa tabel mempertahankan struktur kolom agar tidak gepeng */
+        }
+
+        th {
+            background-color: #f4f5f7;
+            color: #5e6c84;
+            font-weight: 600;
+            padding: 10px 12px;
+            border-bottom: 2px solid #dfe1e6;
+            white-space: nowrap; /* Mencegah judul kolom patah kata ke bawah */
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ebecf0;
+            color: #172b4d;
+            white-space: nowrap; /* Menjaga teks isi tetap rapi dalam satu baris */
+        }
+
+        tr:hover td {
+            background-color: #fafbfc;
+        }
+
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+
+        .total-row {
+            font-weight: bold;
+            background-color: #f4f5f7;
+        }
+
+        .total-row td {
+            border-top: 2px solid #dfe1e6;
+            color: #0052cc;
+        }
+
+        /* Tombol Aksi */
+        .action-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            flex-grow: 1; /* Tombol membesar penuh di layar HP */
+            text-align: center;
+        }
+
+        .btn-primary { background-color: #0052cc; color: white; }
+        .btn-secondary { background-color: #dfe1e6; color: #42526e; }
+
+        /* --- MEDIA QUERIES (PENYESUAIAN LAYAR LEBAR / DESKTOP) --- */
+        @media (min-width: 600px) {
+            body { padding: 20px; }
+            .report-container { padding: 30px; }
+            .report-header { flex-direction: row; justify-content: space-between; align-items: center; }
+            .report-date { text-align: right; background: none; padding: 0; }
+            .company-title h1 { font-size: 24px; }
+            .metrics-grid { gap: 16px; }
+            .metric-card { padding: 20px; }
+            .metric-value { font-size: 24px; }
+            .btn { flex-grow: 0; } /* Tombol kembali ke ukuran normal di desktop */
+        }
+
+        /* Pengaturan Cetak Kertas/PDF */
+        @media print {
+            body { background-color: white; padding: 0; }
+            .report-container { box-shadow: none; padding: 0; max-width: 100%; }
+            .action-bar { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="report-container">
+        <div class="report-header">
+            <div class="company-title">
+                <h1>Bubur Bayi Procil</h1>
+                <p>Sistem ERP - Laporan Aktivitas Penjualan</p>
+            </div>
+            <div class="report-date">
+                <strong>Tanggal Dokumen:</strong> <span id="current-date">31 Mei 2026</span><br>
+                <small style="color: #5e6c84;">Waktu Cetak: Harian</small>
+            </div>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card success">
+                <div class="metric-label">Total Pendapatan</div>
+                <div class="metric-value">Rp 370.000</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Kuantitas Terjual</div>
+                <div class="metric-value">74 Porsi</div>
+            </div>
+            <div class="metric-card warning">
+                <div class="metric-label">Menu Terlaris</div>
+                <div class="metric-value" style="font-size: 14px; padding-top: 4px;">Bubur Beras Merah</div>
+            </div>
+        </div>
+
+        <div class="section-title">Rincian Penjualan Produk</div>
+        
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50px;" class="text-center">No</th>
+                        <th>Nama Produk/Menu</th>
+                        <th class="text-right">Harga Satuan</th>
+                        <th class="text-center">Jumlah Terjual</th>
+                        <th class="text-right">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="text-center">1</td>
+                        <td><strong>Bubur Bayi Beras Merah</strong></td>
+                        <td class="text-right">Rp 5.000</td>
+                        <td class="text-center">42</td>
+                        <td class="text-right">Rp 210.000</td>
+                    </tr>
+                    <tr>
+                        <td class="text-center">2</td>
+                        <td><strong>Bubur Bayi Pisang Susu</strong></td>
+                        <td class="text-right">Rp 5.000</td>
+                        <td class="text-center">32</td>
+                        <td class="text-right">Rp 160.000</td>
+                    </tr>
+                    <tr>
+                        <td class="text-center">3</td>
+                        <td><strong>Puree Wortel Organik</strong></td>
+                        <td class="text-right">Rp 5.000</td>
+                        <td class="text-center">0</td>
+                        <td class="text-right">Rp 0</td>
+                    </tr>
+                    <tr class="total-row">
+                        <td colspan="3" class="text-right">TOTAL KESELURUHAN:</td>
+                        <td class="text-center">74 Porsi</td>
+                        <td class="text-right">Rp 370.000</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn btn-secondary" onclick="alert('Fitur ekspor Excel/CSV sedang diproses oleh core ERP.')">Ekspor Excel</button>
+            <button class="btn btn-primary" onclick="window.print()">Cetak PDF</button>
+        </div>
+    </div>
+
+    <script>
+        // Tanggal otomatis hari ini
+        const options = { year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').innerText = new Date().toLocaleDateString('id-ID', options);
+    </script>
+</body>
+</html>

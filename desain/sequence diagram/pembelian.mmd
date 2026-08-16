@@ -1,0 +1,18 @@
+sequenceDiagram
+    title PB Pembuatan Daftar Menu Harian
+    actor U as User (Pemilik)
+    participant S as Sistem ERP
+    participant I as Modul Persediaan
+    participant A as Modul Akuntansi (Auto-Journal)
+
+    U->>S: Tetapkan Menu Harian & jumlah produksi
+    S->>S: Hitung kebutuhan bahan baku berdasarkan Resep (BOM)
+    S->>I: Cek ketersediaan stok bahan baku
+    alt Stok Cukup
+        S->>I: Kurangi stok bahan baku & kemasan
+        S->>I: Tambah stok Barang Jadi (siap jual)
+        S->>A: Buat jurnal otomatis (Dr. Persediaan Barang Jadi, Kr. Persediaan Bahan Baku)
+        S-->>U: Konfirmasi produksi berhasil
+    else Stok Tidak Cukup
+        S-->>U: Peringatan kekurangan bahan baku
+    end

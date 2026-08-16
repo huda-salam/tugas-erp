@@ -1,0 +1,10 @@
+</main>
+<script>
+  // Hilangkan pesan flash dari URL supaya tidak muncul lagi saat refresh
+  if (location.search.includes('ok=') || location.search.includes('err=')) {
+    history.replaceState(null, '', location.pathname + (location.search
+      .replace(/[?&](ok|err)=[^&]*/g, '').replace(/^&/, '?') || ''));
+  }
+</script>
+</body>
+</html>

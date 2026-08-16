@@ -1,0 +1,92 @@
+<%- include('partials/atas') %>
+
+<form method="get" action="/laporan/pembelian-produksi" class="card no-print" style="padding:12px">
+  <div class="baris" style="align-items:flex-end">
+    <div class="grup"><label for="dari">Dari</label>
+      <input type="date" id="dari" name="dari" class="kontrol" value="<%= dari %>"></div>
+    <div class="grup"><label for="sampai">Sampai</label>
+      <input type="date" id="sampai" name="sampai" class="kontrol" value="<%= sampai %>"></div>
+    <div class="grup" style="max-width:120px"><button class="btn btn-primer btn-blok">Tampilkan</button></div>
+    <div class="grup" style="max-width:120px"><button type="button" class="btn btn-abu btn-blok" onclick="print()">Cetak PDF</button></div>
+  </div>
+</form>
+
+<div class="card">
+  <div class="card-head">
+    <div><h2>Laporan Pembelian & Produksi</h2><p>Logistik bahan baku & output dapur</p></div>
+    <div class="t-lembut" style="font-size:12px;text-align:right">
+      <strong>Periode</strong><br><%= tglID(l.dari) %><%= l.dari !== l.sampai ? ' – ' + tglID(l.sampai) : '' %>
+    </div>
+  </div>
+
+  <div class="ringkas">
+    <div class="kotak ungu"><div class="label">Total Belanja Bahan</div>
+      <div class="nilai"><%= rupiah(l.totalBelanja) %></div></div>
+    <div class="kotak hijau"><div class="label">Total Output Produksi</div>
+      <div class="nilai t-hijau"><%= angka(l.totalOutput) %></div>
+      <div class="ket">porsi jadi</div></div>
+    <div class="kotak"><div class="label">Jumlah Batch</div>
+      <div class="nilai"><%= l.batch.length %></div></div>
+  </div>
+
+  <div class="judul-seksi">1. Pergerakan Bahan Baku</div>
+  <div class="tabel-scroll"><table>
+    <thead><tr>
+      <th class="tg" style="width:44px">No</th><th>Bahan</th>
+      <th class="ka">Stok Awal</th><th class="ka">Dibeli (+)</th>
+      <th class="ka">Nilai Beli</th><th class="ka">Dipakai (−)</th><th class="ka">Stok Akhir</th>
+    </tr></thead>
+    <tbody>
+      <% if (!l.bahan.length) { %><tr><td colspan="7" class="kosong">Belum ada master bahan.</td></tr><% } %>
+      <% l.bahan.forEach((b, i) => { %>
+        <tr>
+          <td class="tg"><%= i+1 %></td>
+          <td><strong><%= b.nama %></strong></td>
+          <td class="ka t-lembut"><%= angka(b.stok_awal) %> <%= b.satuan %></td>
+          <td class="ka t-hijau"><%= b.masuk ? '+' + angka(b.masuk) + ' ' + b.satuan : '-' %></td>
+          <td class="ka"><%= b.nilai_beli ? rupiah(b.nilai_beli) : '-' %></td>
+          <td class="ka t-merah"><%= b.dipakai ? '−' + angka(b.dipakai) + ' ' + b.satuan : '-' %></td>
+          <td class="ka"><strong><%= angka(b.stok_akhir) %> <%= b.satuan %></strong></td>
+        </tr>
+      <% }) %>
+      <tr class="baris-total">
+        <td colspan="4" class="ka">TOTAL PENGELUARAN BELANJA</td>
+        <td class="ka"><%= rupiah(l.totalBelanja) %></td>
+        <td colspan="2"></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <div class="judul-seksi">2. Hasil Aktivitas Produksi</div>
+  <div class="tabel-scroll"><table>
+    <thead><tr>
+      <th style="width:130px">Batch</th><th style="width:95px">Tanggal</th>
+      <th>Bahan Dipakai</th><th>Hasil Produk</th>
+      <th class="ka">Nilai Bahan</th><th class="ka">HPP / unit</th>
+    </tr></thead>
+    <tbody>
+      <% if (!l.batch.length) { %><tr><td colspan="6" class="kosong">Belum ada produksi pada periode ini.</td></tr><% } %>
+      <% l.batch.forEach(b => { %>
+        <tr>
+          <td class="mono"><%= b.no_batch %></td>
+          <td class="t-lembut"><%= b.tanggal %></td>
+          <td class="t-lembut" style="max-width:220px"><%= b.bahan || '-' %></td>
+          <td><strong><%= b.hasil || '-' %></strong></td>
+          <td class="ka"><%= rupiah(b.total_nilai_bahan) %></td>
+          <td class="ka t-biru"><%= b.total_output > 0 ? rupiah(b.total_nilai_bahan / b.total_output) : '-' %></td>
+        </tr>
+      <% }) %>
+      <tr class="baris-total">
+        <td colspan="3" class="ka">TOTAL</td>
+        <td><%= angka(l.totalOutput) %> porsi</td>
+        <td class="ka"><%= rupiah(l.batch.reduce((s,b) => s + b.total_nilai_bahan, 0)) %></td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table></div>
+
+  <p class="petunjuk">Nilai belanja menambah persediaan; yang menjadi HPP hanya bahan yang benar-benar
+     dipakai produksi, dinilai dengan harga rata-rata bergerak.</p>
+</div>
+
+<%- include('partials/bawah') %>

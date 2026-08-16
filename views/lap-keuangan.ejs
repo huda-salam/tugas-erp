@@ -1,0 +1,105 @@
+<%- include('partials/atas') %>
+
+<form method="get" action="/laporan/keuangan" class="card no-print" style="padding:12px">
+  <div class="baris" style="align-items:flex-end">
+    <div class="grup"><label for="dari">Dari</label>
+      <input type="date" id="dari" name="dari" class="kontrol" value="<%= dari %>"></div>
+    <div class="grup"><label for="sampai">Sampai</label>
+      <input type="date" id="sampai" name="sampai" class="kontrol" value="<%= sampai %>"></div>
+    <div class="grup" style="max-width:120px"><button class="btn btn-primer btn-blok">Tampilkan</button></div>
+    <div class="grup" style="max-width:120px"><button type="button" class="btn btn-abu btn-blok" onclick="print()">Cetak</button></div>
+  </div>
+</form>
+
+<div class="card" style="text-align:center">
+  <h2 style="font-size:19px"><%= namaUsaha %></h2>
+  <p class="t-lembut">Laporan Keuangan Sederhana</p>
+  <p class="t-lembut" style="font-size:12px">
+    Periode <%= tglID(l.dari) %><%= l.dari !== l.sampai ? ' – ' + tglID(l.sampai) : '' %>
+  </p>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>1. Laporan Laba Rugi</h2>
+    <p>periode berjalan</p></div>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th style="width:90px">Kode</th><th>Keterangan</th><th class="ka" style="width:140px">Nilai (Rp)</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">4-0000</td><td><strong>PENDAPATAN</strong></td><td></td></tr>
+      <tr><td class="mono">4-1100</td><td style="padding-left:24px">Penjualan Produk (bruto)</td>
+          <td class="ka"><%= rupiah(l.labaRugi.bruto) %></td></tr>
+      <% if (l.labaRugi.komisi > 0) { %>
+      <tr><td class="mono">4-1200</td><td style="padding-left:24px">Potongan Komisi Platform (Grab)</td>
+          <td class="ka t-merah">(<%= rupiah(l.labaRugi.komisi) %>)</td></tr>
+      <% } %>
+      <tr style="background:var(--abu)"><td></td><td><strong>PENDAPATAN BERSIH</strong></td>
+          <td class="ka"><strong><%= rupiah(l.labaRugi.netto) %></strong></td></tr>
+
+      <tr><td class="mono">5-0000</td><td><strong>HARGA POKOK PENJUALAN</strong></td><td></td></tr>
+      <tr><td class="mono">5-1100</td><td style="padding-left:24px">HPP Produk Terjual</td>
+          <td class="ka t-merah">(<%= rupiah(l.labaRugi.hpp) %>)</td></tr>
+      <tr style="background:var(--abu)"><td></td><td><strong>LABA KOTOR</strong></td>
+          <td class="ka"><strong class="<%= l.labaRugi.labaKotor >= 0 ? 't-hijau':'t-merah' %>">
+            <%= rupiah(l.labaRugi.labaKotor) %></strong></td></tr>
+
+      <tr><td class="mono">6-0000</td><td><strong>BEBAN OPERASIONAL</strong></td><td></td></tr>
+      <% if (!l.labaRugi.bebanRows.length) { %>
+        <tr><td></td><td style="padding-left:24px" class="t-lembut"><em>tidak ada beban tercatat</em></td>
+            <td class="ka t-lembut">Rp 0</td></tr>
+      <% } %>
+      <% l.labaRugi.bebanRows.forEach((b, i) => { %>
+        <tr><td class="mono">6-<%= String(1100 + i*100) %></td>
+            <td style="padding-left:24px">Beban <%= b.kategori %></td>
+            <td class="ka t-merah">(<%= rupiah(b.jumlah) %>)</td></tr>
+      <% }) %>
+
+      <tr class="baris-total"><td></td><td>LABA BERSIH PERIODE BERJALAN</td>
+          <td class="ka" style="font-size:15px">
+            <span class="<%= l.labaRugi.labaBersih >= 0 ? 't-hijau':'t-merah' %>">
+              <%= rupiah(l.labaRugi.labaBersih) %></span></td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="card">
+  <div class="card-head"><h2>2. Laporan Posisi Keuangan (Neraca)</h2>
+    <p>posisi per <%= tglID(l.sampai) %></p></div>
+
+  <div class="judul-seksi">Aset (Aktiva)</div>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th style="width:90px">Kode</th><th>Keterangan</th><th class="ka" style="width:140px">Nilai (Rp)</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">1-1100</td><td>Kas & Setara Kas</td><td class="ka"><%= rupiah(l.neraca.kas) %></td></tr>
+      <tr><td class="mono">1-1150</td><td>Piutang GrabFood (saldo belum cair)</td>
+          <td class="ka"><%= rupiah(l.neraca.piutang) %></td></tr>
+      <tr><td class="mono">1-1200</td><td>Persediaan Bahan Baku</td><td class="ka"><%= rupiah(l.neraca.persBahan) %></td></tr>
+      <tr><td class="mono">1-1300</td><td>Persediaan Produk Jadi</td><td class="ka"><%= rupiah(l.neraca.persProduk) %></td></tr>
+      <tr class="baris-total"><td></td><td>TOTAL ASET</td><td class="ka"><%= rupiah(l.neraca.totalAset) %></td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="judul-seksi">Liabilitas & Ekuitas (Pasiva)</div>
+  <div class="tabel-scroll"><table>
+    <thead><tr><th style="width:90px">Kode</th><th>Keterangan</th><th class="ka" style="width:140px">Nilai (Rp)</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">2-1100</td><td>Utang Usaha (pembelian belum dibayar)</td>
+          <td class="ka"><%= rupiah(l.neraca.utang) %></td></tr>
+      <tr><td class="mono">3-1100</td><td>Modal Pemilik Disetor</td>
+          <td class="ka"><%= rupiah(l.neraca.modal) %></td></tr>
+      <tr><td class="mono">3-1200</td><td>Laba Ditahan (akumulasi)</td>
+          <td class="ka t-biru"><%= rupiah(l.neraca.labaDitahan) %></td></tr>
+      <tr class="baris-total"><td></td><td>TOTAL LIABILITAS & EKUITAS</td>
+          <td class="ka"><%= rupiah(l.neraca.totalPasiva) %></td></tr>
+    </tbody>
+  </table></div>
+
+  <p style="text-align:right;margin-top:12px">
+    <span class="badge <%= l.neraca.seimbang ? 'b-hijau':'b-merah' %>">
+      <%= l.neraca.seimbang ? '✓ Neraca seimbang' : '⚠ Neraca tidak seimbang' %>
+    </span>
+  </p>
+  <p class="petunjuk">Semua angka dihitung dari transaksi yang tercatat — tidak ada nilai yang diketik manual.
+     Persediaan dinilai dengan harga rata-rata bergerak.</p>
+</div>
+
+<%- include('partials/bawah') %>
