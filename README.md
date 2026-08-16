@@ -24,6 +24,22 @@ perintah terminal yang perlu dijalankan pemilik usaha.
 
 > **Pakai Node 20 atau lebih baru.** Cek dengan `node -v`.
 
+### Memperagakan pendaftaran dari nol
+
+Untuk menunjukkan wizard pendaftaran tanpa mengusik data yang sudah ada:
+
+```bash
+./demo-pendaftaran.sh      # Linux / macOS
+demo-pendaftaran.cmd       # Windows (klik dua kali juga bisa)
+```
+
+Skrip ini memakai database terpisah `data/demo-baru.sqlite` di port 3005, jadi
+`data/erp.sqlite` tidak disentuh dan boleh tetap jalan di port 3000. Tambahkan `-y`
+untuk menghapus database demo lama tanpa bertanya.
+
+> Jangan pakai `npm run reset` untuk memunculkan wizard — perintah itu justru
+> menyiapkan akun bawaan dan menandai setup selesai, sehingga wizard dilewati.
+
 ---
 
 ## Akun & hak akses
