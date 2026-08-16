@@ -1,6 +1,15 @@
 </main>
 
-<div class="toast-wadah" id="toast-wadah"></div>
+<%
+// Koneksi SSE menahan satu slot koneksi browser secara permanen, sementara
+// HTTP/1.1 hanya mengizinkan ~6 per origin. Dulu partial ini dipasang di semua
+// halaman, sehingga tab Master/Inventory/Laporan pun ikut mengunci slot dan
+// perpindahan menu jadi mengantre. Sekarang hanya halaman yang benar-benar
+// menunggu pesanan masuk yang menyalakannya.
+const realtime = jalur === '/' || jalur.startsWith('/kasir') || jalur.startsWith('/pesanan');
+%>
+
+<% if (realtime) { %><div class="toast-wadah" id="toast-wadah"></div><% } %>
 
 <script>
   // Hilangkan pesan flash dari URL supaya tidak muncul lagi saat refresh
@@ -10,12 +19,22 @@
   }
 </script>
 
+<% if (realtime) { %>
 <script>
-// Pemberitahuan pesanan masuk dari kanal luar (WhatsApp / GrabFood) lewat SSE.
+// Pemberitahuan pesanan masuk dari kanal luar (WhatsApp / GrabFood).
+//
+// Hanya SATU tab yang memegang koneksi SSE; tab lain menerima siaran ulang lewat
+// BroadcastChannel. Tanpa ini tiap tab menahan satu slot koneksi browser secara
+// permanen, dan HTTP/1.1 cuma mengizinkan ~6 per origin — perpindahan menu jadi
+// mengantre sampai belasan detik.
+//
+// Kepemimpinan dipegang lewat Web Locks: kuncinya atomik dan otomatis lepas saat
+// tab ditutup. localStorage tidak dipakai karena baca-lalu-tulis di sana tidak
+// atomik, sehingga dua tab bisa sama-sama merasa jadi pemimpin.
 (function () {
   if (!window.EventSource) return;
 
-  const rp = n => 'Rp ' + Math.round(n).toLocaleString('id-ID');
+  const rp = (n) => 'Rp ' + Math.round(n).toLocaleString('id-ID');
   const wadah = document.getElementById('toast-wadah');
   const jalur = location.pathname;
 
@@ -23,6 +42,7 @@
   const bolehMuatUlang = jalur === '/' || jalur.startsWith('/pesanan');
 
   function toast(d) {
+    if (!wadah) return;
     const el = document.createElement('div');
     el.className = 'toast' + (d.kanal === 'grab' ? ' grab' : '');
     const lencana = d.sumber === 'whatsapp' ? '💬 WhatsApp' : '🛵 GrabFood';
@@ -40,13 +60,55 @@
     setTimeout(() => el.remove(), 12000);
   }
 
-  const es = new EventSource('/events');
-  es.addEventListener('pesanan-baru', (ev) => {
-    let d; try { d = JSON.parse(ev.data); } catch { return; }
+  // Jaring pengaman: satu pesanan hanya ditampilkan sekali per tab, apa pun
+  // jalur datangnya (koneksi sendiri atau siaran dari tab lain).
+  const terlihat = new Map();
+  function sudahPernah(id) {
+    const kini = Date.now();
+    for (const [k, t] of terlihat) if (kini - t > 15000) terlihat.delete(k);
+    if (terlihat.has(id)) return true;
+    terlihat.set(id, kini);
+    return false;
+  }
+
+  function tangani(d) {
+    if (!d || sudahPernah(d.id)) return;
     toast(d);
     if (bolehMuatUlang) setTimeout(() => location.reload(), 1200);
-  });
+  }
+
+  const bc = 'BroadcastChannel' in window ? new BroadcastChannel('procil-pesanan') : null;
+  if (bc) bc.onmessage = (ev) => tangani(ev.data);
+
+  let es = null;
+  function sambung() {
+    if (es) return;
+    es = new EventSource('/events');
+    es.addEventListener('pesanan-baru', (ev) => {
+      let d; try { d = JSON.parse(ev.data); } catch { return; }
+      if (bc) bc.postMessage(d);   // teruskan dulu; BroadcastChannel tidak mengirim balik ke pengirim
+      tangani(d);
+    });
+  }
+  function putus() { if (es) { es.close(); es = null; } }
+
+  // Lepaskan slot koneksi begitu halaman ditinggalkan, jangan menunggu timeout —
+  // inilah yang membuat perpindahan menu terasa menggantung.
+  addEventListener('pagehide', putus);
+
+  if (navigator.locks && bc) {
+    // Menang kunci = jadi pemimpin, dan tahan selamanya sampai tab ditutup.
+    navigator.locks.request('procil-sse-pemimpin', { mode: 'exclusive' }, () => {
+      sambung();
+      return new Promise(() => {});   // sengaja tidak pernah selesai
+    }).catch(() => sambung());
+  } else {
+    // Tanpa Web Locks atau BroadcastChannel tidak ada cara berbagi, tiap tab
+    // terpaksa menyambung sendiri.
+    sambung();
+  }
 })();
 </script>
+<% } %>
 </body>
 </html>
