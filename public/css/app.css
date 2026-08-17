@@ -7,12 +7,19 @@
   --teks:#172b4d; --teks-lembut:#5e6c84; --teks-samar:#a5adba;
   --garis:#dfe1e6; --garis-tipis:#e3e6ec; --latar:#f5f7fa; --abu:#f4f5f7;
   --radius:8px; --radius-lg:12px; --bayang:0 1px 3px rgba(0,0,0,.06);
+  /* Tinggi nav bawah dipakai bersama oleh .bar-bawah, padding body, dan toast.
+     Sebelumnya tiap tempat menebak sendiri (54px) padahal tinggi aslinya 77px,
+     sehingga bar total kasir tertimpa nav. Satu variabel, satu kebenaran.
+     --aman-bawah menghormati area rumah iPhone. */
+  --tinggi-nav:60px;
+  --aman-bawah:env(safe-area-inset-bottom, 0px);
+  --sisa-nav:calc(var(--tinggi-nav) + var(--aman-bawah));
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   background:var(--latar); color:var(--teks); font-size:14px; line-height:1.45;
-  padding-bottom:76px;
+  padding-bottom:calc(var(--sisa-nav) + 16px);
 }
 
 /* ---------- Shell ---------- */
@@ -31,12 +38,15 @@ body{
 .nav{
   position:fixed; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--garis-tipis);
   display:flex; overflow-x:auto; z-index:60; box-shadow:0 -2px 10px rgba(0,0,0,.06);
+  height:var(--sisa-nav); padding-bottom:var(--aman-bawah);
 }
 .nav a{
-  flex:1 0 auto; min-width:64px; padding:8px 6px 7px; text-align:center; text-decoration:none;
+  flex:1 0 auto; min-width:64px; padding:0 6px; text-align:center; text-decoration:none;
   color:var(--teks-lembut); font-size:10px; font-weight:600; border-top:3px solid transparent;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:2px; line-height:1.15;
 }
-.nav a i{display:block; font-style:normal; font-size:19px; margin-bottom:2px}
+.nav a i{font-style:normal; font-size:18px; line-height:1; margin:0}
 .nav a.on{color:var(--biru); border-top-color:var(--biru); background:var(--biru-muda)}
 
 /* ---------- Kartu ---------- */
@@ -150,12 +160,14 @@ tbody tr:last-child td{border-bottom:none}
 .bayar input{display:none}
 
 /* ---------- Bar bawah (total + proses) ---------- */
-.bar-bawah{position:fixed; bottom:54px; left:0; right:0; background:#fff; padding:10px 16px;
+.bar-bawah{position:fixed; bottom:var(--sisa-nav); left:0; right:0; background:#fff; padding:10px 16px;
   display:flex; justify-content:space-between; align-items:center; gap:12px;
   border-top:1px solid var(--garis-tipis); box-shadow:0 -4px 10px rgba(0,0,0,.07); z-index:55}
 .bar-bawah .label{font-size:11px; color:var(--teks-lembut); font-weight:600}
 .bar-bawah .total{font-size:20px; font-weight:800; color:var(--merah-tua)}
-body.ada-bar{padding-bottom:140px}
+/* bar total tingginya ikut isi (kanal Grab menambah baris komisi), jadi
+   dilebihkan sedikit — kelebihan ruang gulir tidak merugikan, tertimpa iya. */
+body.ada-bar{padding-bottom:calc(var(--sisa-nav) + 116px)}
 
 /* ---------- Pesan ---------- */
 .pesan{padding:11px 14px; border-radius:var(--radius); font-size:13px; font-weight:600; margin-bottom:12px}
@@ -164,12 +176,15 @@ body.ada-bar{padding-bottom:140px}
 
 /* ---------- Layar lebar ---------- */
 @media (min-width:860px){
-  body{padding-bottom:20px; padding-left:190px}
-  body.ada-bar{padding-bottom:80px}
-  .nav{top:0; bottom:0; right:auto; width:190px; flex-direction:column; overflow-y:auto;
-    border-top:none; border-right:1px solid var(--garis-tipis); padding-top:8px; box-shadow:none}
-  .nav a{flex:0 0 auto; text-align:left; padding:11px 16px; font-size:13px;
-    border-top:none; border-left:3px solid transparent; display:flex; align-items:center; gap:10px}
+  /* Nav pindah ke samping, jadi tidak lagi memakan ruang bawah */
+  body{--tinggi-nav:0px; padding-bottom:20px; padding-left:190px}
+  body.ada-bar{padding-bottom:96px}
+  .nav{top:0; bottom:0; right:auto; width:190px; height:auto; flex-direction:column; overflow-y:auto;
+    border-top:none; border-right:1px solid var(--garis-tipis); padding-top:8px; padding-bottom:8px;
+    box-shadow:none}
+  .nav a{flex:0 0 auto; text-align:left; padding:11px 16px; font-size:13px; line-height:1.3;
+    border-top:none; border-left:3px solid transparent;
+    display:flex; flex-direction:row; align-items:center; justify-content:flex-start; gap:10px}
   .nav a i{display:inline; font-size:16px; margin:0}
   .nav a.on{border-left-color:var(--biru); border-top-color:transparent}
   .topbar{padding-left:206px; margin-left:-190px}
@@ -378,7 +393,7 @@ body.ada-bar{padding-bottom:140px}
 /* =========================================================
    Toast pemberitahuan pesanan masuk (SSE) — dipakai di seluruh app
    ========================================================= */
-.toast-wadah{position:fixed; right:12px; bottom:70px; z-index:200;
+.toast-wadah{position:fixed; right:12px; bottom:calc(var(--sisa-nav) + 12px); z-index:200;
   display:flex; flex-direction:column; gap:8px; max-width:min(340px,calc(100vw - 24px))}
 @media (min-width:860px){ .toast-wadah{bottom:16px} }
 .toast{background:#fff; border-left:4px solid var(--hijau); border-radius:8px; padding:12px 14px;
